@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import threading
 import tempfile
@@ -18,7 +19,8 @@ FORMAT = 'int16'             # 发送端使用 int16
 UDP_PORT = 52210             # 与发送端目标端口一致
 
 # ================== 识别模型配置 ==================
-MODEL_PATH = "~/LocalASR/server_linux/models/faster-whisper-tiny.en"  # 可改为你实际路径
+# 模型实际路径
+MODEL_PATH = os.path.expanduser("~/LocalASR/server_linux/models/faster-whisper-tiny.en")
 LANG = "en"
 
 # 低延迟断句参数（与原代码相同）
