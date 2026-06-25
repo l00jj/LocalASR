@@ -4,7 +4,7 @@ import sys
 
 
 # 音频参数（两端保持一致）
-SAMPLE_RATE = 48000   # 采样率
+SAMPLE_RATE = 44100   # 采样率
 CHANNELS = 2          # 立体声
 CHUNK = 1024          # 每次读取的帧数（块大小）
 FORMAT = 'int16'      # 16-bit PCM（与 pyaudio.paInt16 等价）

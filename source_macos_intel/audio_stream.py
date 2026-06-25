@@ -9,8 +9,8 @@ CHUNK = 1024          # 每次读取的帧数（块大小）
 FORMAT = 'int16'      # 16-bit PCM（与 pyaudio.paInt16 等价）
 
 # 接收端 UDP 配置
-TARGET_IP = "<接收端IP>"   # 替换为接收端 IP
-TARGET_PORT = 12345
+TARGET_IP = "192.168.0.113"   # 替换为接收端 IP
+TARGET_PORT = 52210
 
 def find_blackhole_device():
     """查找 BlackHole 输入设备的索引（设备 ID）"""
