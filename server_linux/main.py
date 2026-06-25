@@ -2,17 +2,20 @@ import alsaaudio
 import socket
 import sys
 
-CHUNK = 1024
-CHANNELS = 2
-RATE = 44100
-PORT = 12345
+
+# 音频参数（两端保持一致）
+SAMPLE_RATE = 48000   # 采样率
+CHANNELS = 2          # 立体声
+CHUNK = 1024          # 每次读取的帧数（块大小）
+FORMAT = 'int16'      # 16-bit PCM（与 pyaudio.paInt16 等价）
+PORT = 52210
 
 def main():
     # 打开 ALSA 默认播放设备
     # 格式：S16_LE 对应 signed 16-bit little endian
     out = alsaaudio.PCM(alsaaudio.PCM_PLAYBACK, device='default')
     out.setchannels(CHANNELS)
-    out.setrate(RATE)
+    out.setrate(SAMPLE_RATE)
     out.setformat(alsaaudio.PCM_FORMAT_S16_LE)
     out.setperiodsize(CHUNK)  # 每次处理 1024 帧，与发送端匹配
 
