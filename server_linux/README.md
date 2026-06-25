@@ -33,6 +33,8 @@ pip install pyalsaaudio modelscope soundfile -i https://pypi.tuna.tsinghua.edu.c
 tmp_path=~/LocalASR/server_linux/models
 
 modelscope download --model 'Systran/faster-whisper-tiny.en' --local_dir "$tmp_path/faster-whisper-tiny.en"
+
+modelscope download --model 'Systran/faster-whisper-base.en' --local_dir "$tmp_path/faster-whisper-base.en"
 ```
 
 

@@ -20,7 +20,7 @@ UDP_PORT = 52210             # 与发送端目标端口一致
 
 # ================== 识别模型配置 ==================
 # 模型实际路径
-MODEL_PATH = os.path.expanduser("~/LocalASR/server_linux/models/faster-whisper-tiny.en")
+MODEL_PATH = os.path.expanduser("~/LocalASR/server_linux/models/faster-whisper-base.en")
 LANG = "en"
 
 # 低延迟断句参数（与原代码相同）
@@ -110,12 +110,13 @@ def recognition_worker():
                 continue
 
         # 保存临时 WAV 文件并识别
-        fd, temp_path = tempfile.mkstemp(suffix=".wav")
-        os.close(fd)
-        sf.write(temp_path, segment, SAMPLE_RATE)
+        # fd, temp_path = tempfile.mkstemp(suffix=".wav")
+        # os.close(fd)
+        # sf.write(temp_path, segment, SAMPLE_RATE)
         try:
             segments, _ = model.transcribe(
-                temp_path,
+                # temp_path,
+                segment,
                 language=LANG,
                 beam_size=5,
                 vad_filter=True,
@@ -133,8 +134,8 @@ def recognition_worker():
                     print(f"[识别] {text}")
         except Exception as e:
             print(f"[识别错误] {e}", file=sys.stderr)
-        finally:
-            os.unlink(temp_path)
+        # finally:
+        #     os.unlink(temp_path)
 
 # ================== 启动线程 ==================
 udp_thread = threading.Thread(target=udp_receiver, daemon=True)
