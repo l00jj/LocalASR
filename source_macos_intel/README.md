@@ -5,17 +5,6 @@ BlackHole 在旧系统无法完成编译只能直接安装 BlackHole2ch-0.6.1.pk
 安装包在官网的引导下去 Discord 下载
 > ./BlackHole/BlackHole2ch-0.6.1.pkg 内可以直接安装
 
-
-### 安装 SDL2
-
-```shell
-mkdir build
-cd build
-../configure
-make -j
-sudo make install
-```
-
 ### 部署 python
 
 ```shell
@@ -26,7 +15,21 @@ mkdir -p venv
 
 # 在那里创建你的 llama 环境
 python3 -m venv ./venv
+
+source ./venv/bin/activate
 ```
+
+### 装载组件
+
+```shell
+# 记录组件
+# pip freeze > requirements.txt
+
+# 装载组件
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
 
 
 
@@ -52,6 +55,3 @@ cd source_macos_intel
 source ./venv/bin/activate
 ```
 
-```shell
-python 
-```
