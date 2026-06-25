@@ -1,5 +1,7 @@
 
-### 部署 python
+### 部署 Python 环境
+
+安装 python3.12
 
 ```shell
 cd server_linux
@@ -18,11 +20,23 @@ source ./venv/bin/activate
 ```shell
 sudo apt update
 sudo apt install -y libasound2-dev
+
+pip install pyalsaaudio modelscope -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
 
+### 下载模型
 
-## 使用
+
+```shell
+# 模型列表路径
+tmp_path=~/LocalASR/server_linux/models
+
+modelscope download --model 'Systran/faster-whisper-tiny.en' --local_dir "$tmp_path/faster-whisper-tiny.en"
+```
+
+
+### 使用
 
 ```shell
 cd server_linux
