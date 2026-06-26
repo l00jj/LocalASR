@@ -1,3 +1,13 @@
+## 设置
+
+```shell
+git config --global http.proxy http://127.0.0.1:7890
+```
+
+```shell
+git config --global --unset http.proxy
+```
+
 ## 环境部署
 
 ### 安装 BlackHole
