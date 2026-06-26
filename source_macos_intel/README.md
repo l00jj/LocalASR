@@ -9,8 +9,7 @@ git config --global credential.helper 'cache --timeout=86400'
 ```
 
 ```shell
-git config --global --unset http.proxy
-git config --global --unset https.proxy
+git config --global --unset http.proxy && git config --global --unset https.proxy
 ```
 
 ```shell
