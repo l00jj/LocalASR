@@ -24,62 +24,15 @@ UDP_PORT = 52210             # 与发送端目标端口一致
 MODEL_PATH = os.path.expanduser("~/LocalASR/server_linux/models/faster-whisper-base.en")
 LANG = "en"
 
-# 低延迟断句参数
-
-'''
-#### A. 业务层参数（你在 `recognition_worker` 中控制切分音频块的）
-
-- **`SILENCE_THRESHOLD = 0.01`**
-  - **作用**：音量阈值。当音频数据的振幅绝对值超过 `0.01` 时，认为“有声音”；低于它且持续一段时间，认为“进入了静音”。
-  - **调优**：如果背景有底噪，调高到 `0.02~0.03` 防止误触发。
-
-- **`MIN_SILENCE_DURATION = 0.4`**
-  - **作用**：**断句的“刹车”**。当检测到连续静音达到 0.4 秒时，立即把这一段音频打包送去识别。
-  - **含义**：这是你整条链路**延迟和准确性的核心开关**。0.4 秒能保证说话停顿后快速出字（低延迟），但如果说话语速慢、换气长，可能造成句子被切断。
-
-- **`MIN_SPEECH_DURATION = 0.3`**
-  - **作用**：**防抖过滤**。只有语音持续超过 0.3 秒，才会被送去识别。
-  - **含义**：用来过滤掉“咔哒”声、键盘敲击声等瞬态噪音，避免空转 CPU。
-
-- **`MAX_SEGMENT_DURATION = 8.0`**
-  - **作用**：**强制“熔断”**。防止某人一直说话不停导致 `audio_buffer` 无限堆积。一旦攒够 8 秒音频，哪怕没有静音，也强制切开送去识别。
-  - **含义**：保证内存不会爆掉，也保证超大段语音能被及时处理。
-'''
-
+# 低延迟断句参数（与原代码相同）
 SILENCE_THRESHOLD = 0.01
 MIN_SILENCE_DURATION = 0.4
-MIN_SPEECH_DURATION = 0.3
 MAX_SEGMENT_DURATION = 8.0
-
-
-'''
-#### B. 模型层参数（传给 `model.transcribe` 的 `vad_parameters`）
-
-这是 `faster-whisper` **内部自带的 VAD 滤波器**，作用是在你切好的 `segment` 里，**把两头多余的静音再“修剪”掉**，并判断中间哪些片段确实是人声。
-
-- **`VAD_THRESHOLD = 0.5`**
-  - **作用**：语音检测的敏感度。值越高（越接近 1），只有非常像人声的才会保留；值越低，越容易把噪音当人声。
-  - **调优**：如果识别结果里经常出现噪音被翻译成奇怪英文，可以提到 `0.6~0.7`。
-  - 默认值：0.5
-
-- **`VAD_MIN_SPEECH_MS = 150`**
-  - **作用**：认为“人声”的最短持续时间是 150 毫秒。短于这个的统统忽略。
-  - 默认值：250
-
-- **`VAD_MIN_SILENCE_MS = 300`**
-  - **作用**：在 Whisper 内部判断，如果这一段话里静音超过 300 毫秒，就强行把句子切开（生成多个 `seg`）。
-  - **注意**：**这里有个叠加效应！** 你的业务逻辑已经用 0.4 秒（400ms）切了一次，这里又用 300ms 切一次。好处是，即使你业务逻辑没切（比如因为 `MAX_SEGMENT_DURATION` 强制切了超大段），Whisper 内部也会帮你把这句话里因换气造成的停顿拆开，输出更流畅的短句。
-  - 默认值：100
-
-- **`VAD_SPEECH_PAD_MS = 200`**
-  - **作用**：在检测到的人声片段前后，**额外保留 200 毫秒**的音频。
-  - **含义**：防止 VAD 切得太干净，把字头字尾的轻微爆破音（如 p、t、k）给切丢了，导致识别缺字。保留一点上下文能让识别更准。
-  - 默认值：400
-'''
+MIN_SPEECH_DURATION = 0.3
 
 VAD_THRESHOLD = 0.5
 VAD_MIN_SPEECH_MS = 150
-VAD_MIN_SILENCE_MS = 100
+VAD_MIN_SILENCE_MS = 300
 VAD_SPEECH_PAD_MS = 200
 
 # ================== 加载模型 ==================
@@ -156,6 +109,33 @@ def recognition_worker():
                 speech_length = 0.0
             else:
                 continue
+
+        # 保存临时 WAV 文件并识别
+        # fd, temp_path = tempfile.mkstemp(suffix=".wav")
+        # os.close(fd)
+        # sf.write(temp_path, segment, SAMPLE_RATE)
+        # try:
+        #     segments, _ = model.transcribe(
+        #         temp_path,
+        #         language=LANG,
+        #         beam_size=5,
+        #         vad_filter=True,
+        #         vad_parameters=dict(
+        #             threshold=VAD_THRESHOLD,
+        #             min_speech_duration_ms=VAD_MIN_SPEECH_MS,
+        #             min_silence_duration_ms=VAD_MIN_SILENCE_MS,
+        #             speech_pad_ms=VAD_SPEECH_PAD_MS
+        #         ),
+        #         condition_on_previous_text=False
+        #     )
+        #     for seg in segments:
+        #         text = seg.text.strip()
+        #         if text:
+        #             print(f"[识别] {text}")
+        # except Exception as e:
+        #     print(f"[识别错误] {e}", file=sys.stderr)
+        # finally:
+        #     os.unlink(temp_path)
         
         # 直接处理音频数据
         
@@ -170,7 +150,7 @@ def recognition_worker():
             segments, _ = model.transcribe(
                 segment,
                 language=LANG,
-                beam_size=5,                                     # 搜索宽度，结果前 N 候选
+                beam_size=5,
                 vad_filter=True,
                 vad_parameters=dict(
                     threshold=VAD_THRESHOLD,
