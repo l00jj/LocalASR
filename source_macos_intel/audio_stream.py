@@ -1,3 +1,4 @@
+import argparse
 import sounddevice as sd
 import socket
 import numpy as np
@@ -9,8 +10,9 @@ CHUNK = 1024          # 每次读取的帧数（块大小）
 FORMAT = 'int16'      # 16-bit PCM（与 pyaudio.paInt16 等价）
 
 # 接收端 UDP 配置
-TARGET_IP = "192.168.0.113"   # 替换为接收端 IP
-TARGET_PORT = 52210
+target_server = ""            # 接收端 Server (192.168.0.118:52210)
+target_ip = "192.168.0.113"   # 接收端 IP (192.168.0.118)
+target_port = 52210           # 接收端 PORT (52210)
 
 def find_blackhole_device():
     """查找 BlackHole 输入设备的索引（设备 ID）"""
@@ -36,7 +38,7 @@ def audio_callback(indata, frames, time, status):
         print(f"音频状态: {status}", flush=True)
     # 将音频数据转为 bytes 并发送
     # indata 是 int16 类型，直接 tobytes() 即可
-    sock.sendto(indata.tobytes(), (TARGET_IP, TARGET_PORT))
+    sock.sendto(indata.tobytes(), (target_ip, target_port))
 
 # 打开音频输入流（使用回调模式）
 stream = sd.InputStream(
@@ -48,12 +50,33 @@ stream = sd.InputStream(
     callback=audio_callback
 )
 
-print(f"开始推流到 {TARGET_IP}:{TARGET_PORT} ... (按 Ctrl+C 停止)")
-try:
-    with stream:
-        # 保持流打开，直到用户中断
-        while True:
-            sd.sleep(1000)  # 简单休眠，让回调持续运行
-except KeyboardInterrupt:
-    print("\n推流已停止")
-    sock.close()
+
+def main():
+    global target_server, target_ip, target_port
+    # 创建解析器
+    parser = argparse.ArgumentParser(description="截获参数的示例")
+    
+    # 定义你想要截获的参数
+    parser.add_argument("--server", type=str, required=True, help="服务器地址")
+    args = parser.parse_args()
+    
+    # 解析 server
+    target_server = args.server
+    target_ip, port_str = target_server.rsplit(':', 1)
+    target_port = int(port_str)
+    
+    # 推流
+    print(f"对接的服务器: {target_server}")
+    print(f"开始推流到 {target_ip}:{target_port} ... (按 Ctrl+C 停止)")
+    try:
+        with stream:
+            # 保持流打开，直到用户中断
+            while True:
+                sd.sleep(1000)  # 简单休眠，让回调持续运行
+    except KeyboardInterrupt:
+        print("\n推流已停止")
+        sock.close()
+
+
+if __name__ == '__main__':
+    main()

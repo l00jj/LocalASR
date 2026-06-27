@@ -1,3 +1,27 @@
+### 网络配置
+
+```shell
+git config --global http.proxy http://127.0.0.1:7890 && git config --global https.proxy http://127.0.0.1:7890
+```
+
+```shell
+git remote -v
+git remote set-url origin https://github.com/l00jj/LocalASR.git
+```
+
+```shell
+# 账号密码缓存一天
+git config --global credential.helper 'cache --timeout=86400'
+
+# 取消代理
+git config --global --unset http.proxy && git config --global --unset https.proxy
+```
+
+
+
+
+
+
 ### 安装 BlackHole
 BlackHole 在旧系统无法完成编译只能直接安装 BlackHole2ch-0.6.1.pkg
 安装包在官网的引导下去 Discord 下载

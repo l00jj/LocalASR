@@ -110,13 +110,12 @@ def recognition_worker():
                 continue
 
         # 保存临时 WAV 文件并识别
-        # fd, temp_path = tempfile.mkstemp(suffix=".wav")
-        # os.close(fd)
-        # sf.write(temp_path, segment, SAMPLE_RATE)
+        fd, temp_path = tempfile.mkstemp(suffix=".wav")
+        os.close(fd)
+        sf.write(temp_path, segment, SAMPLE_RATE)
         try:
             segments, _ = model.transcribe(
-                # temp_path,
-                segment,
+                temp_path,
                 language=LANG,
                 beam_size=5,
                 vad_filter=True,
@@ -134,8 +133,29 @@ def recognition_worker():
                     print(f"[识别] {text}")
         except Exception as e:
             print(f"[识别错误] {e}", file=sys.stderr)
-        # finally:
-        #     os.unlink(temp_path)
+        finally:
+            os.unlink(temp_path)
+        
+        # try:
+        #     segments, _ = model.transcribe(
+        #         segment,
+        #         language=LANG,
+        #         beam_size=5,
+        #         vad_filter=True,
+        #         vad_parameters=dict(
+        #             threshold=VAD_THRESHOLD,
+        #             min_speech_duration_ms=VAD_MIN_SPEECH_MS,
+        #             min_silence_duration_ms=VAD_MIN_SILENCE_MS,
+        #             speech_pad_ms=VAD_SPEECH_PAD_MS
+        #         ),
+        #         condition_on_previous_text=False
+        #     )
+        #     for seg in segments:
+        #         text = seg.text.strip()
+        #         if text:
+        #             print(f"[识别] {text}")
+        # except Exception as e:
+        #     print(f"[识别错误] {e}", file=sys.stderr)
 
 # ================== 启动线程 ==================
 udp_thread = threading.Thread(target=udp_receiver, daemon=True)

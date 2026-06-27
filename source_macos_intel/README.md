@@ -1,21 +1,15 @@
 ## 设置
 
+
+## 使用
+
 ```shell
-git config --global http.proxy http://127.0.0.1:7890
-git config --global https.proxy http://127.0.0.1:7890
+cd source_macos_intel
+source ./venv/bin/activate
 ```
 
 ```shell
-git remote -v
-git remote set-url origin https://github.com/l00jj/LocalASR.git
-```
-
-```shell
-# 账号密码缓存一天
-git config --global credential.helper 'cache --timeout=86400'
-
-# 取消代理
-git config --global --unset http.proxy && git config --global --unset https.proxy
+python audio_stream.py
 ```
 
 
@@ -52,8 +46,6 @@ pip install -r requirements.txt
 ```
 
 
-
-
 ## 系统配置
 
 ### 创建多输出设备
@@ -67,12 +59,4 @@ pip install -r requirements.txt
 
 现在，你的会议声音会同时传给你和 BlackHole。
 
-
-
-## 使用
-
-```shell
-cd source_macos_intel
-source ./venv/bin/activate
-```
 
