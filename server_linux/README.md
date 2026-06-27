@@ -21,7 +21,7 @@ source ./venv/bin/activate
 sudo apt update
 sudo apt install -y libasound2-dev
 
-pip install pyalsaaudio modelscope soundfile -i https://pypi.tuna.tsinghua.edu.cn/simple
+pip install pyalsaaudio modelscope soundfile librosa -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
 
