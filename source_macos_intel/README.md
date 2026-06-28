@@ -9,7 +9,7 @@ source ./venv/bin/activate
 ```
 
 ```shell
-python audio_stream.py
+python audio_stream.py --server 192.168.0.118:52210
 ```
 
 
@@ -31,6 +31,7 @@ mkdir -p venv
 # 在那里创建你的 llama 环境
 python3 -m venv ./venv
 
+# 激活环境
 source ./venv/bin/activate
 ```
 

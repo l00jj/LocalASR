@@ -2,6 +2,7 @@ import argparse
 import sounddevice as sd
 import socket
 import numpy as np
+import sys
 
 # 音频参数（和接收端保持一致）
 SAMPLE_RATE = 44100   # 采样率
@@ -65,8 +66,18 @@ def main():
     target_ip, port_str = target_server.rsplit(':', 1)
     target_port = int(port_str)
     
-    # 推流
-    print(f"对接的服务器: {target_server}")
+    # --- 启动前先测试 UDP 连通性 ---
+    print(f"推理服务器入口: {target_server}")
+    # try:
+    #     test_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    #     test_sock.settimeout(2)  # 设置超时
+    #     test_sock.sendto(b'test', (target_ip, target_port))
+    #     # 如果 sendto 不抛异常，就认为本地网络正常
+    #     test_sock.close()
+    # except Exception as e:
+    #     print(f"目标地址不可达或网络错误: {e}")
+    #     sys.exit(1)
+
     print(f"开始推流到 {target_ip}:{target_port} ... (按 Ctrl+C 停止)")
     try:
         with stream:

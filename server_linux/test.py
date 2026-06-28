@@ -16,6 +16,9 @@ CHANNELS = 2
 CHUNK = 1024                 # 每包帧数
 FORMAT = 'int16'             # 发送端使用 int16
 
+# ================== 音频输入 faster-whisper 模型参数 ==================
+TARGET_SR = 16000
+
 # ================== UDP 接收配置 ==================
 UDP_PORT = 52210             # 与发送端目标端口一致
 
@@ -23,6 +26,7 @@ UDP_PORT = 52210             # 与发送端目标端口一致
 # 模型实际路径
 MODEL_PATH = os.path.expanduser("~/LocalASR/server_linux/models/faster-whisper-base.en")
 LANG = "en"
+
 
 # 低延迟断句参数
 
@@ -163,8 +167,15 @@ def recognition_worker():
         segment = segment.astype(np.float32)
 
         # 2. 重采样到 16kHz (如果原始采样率不是 16000)
-        if SAMPLE_RATE != 16000:
-            segment = librosa.resample(segment, orig_sr=SAMPLE_RATE, target_sr=16000)
+        if SAMPLE_RATE != TARGET_SR:
+            segment = librosa.resample(segment, orig_sr=SAMPLE_RATE, target_sr=TARGET_SR)
+
+        # ======= 处理计时 =======
+        # 记录音频实际时长（秒）
+        timer_audio_duration = len(segment) / TARGET_SR
+        # 开始计时
+        timer_start_time = time.perf_counter()
+
 
         try:
             segments, _ = model.transcribe(
@@ -184,6 +195,16 @@ def recognition_worker():
                 text = seg.text.strip()
                 if text:
                     print(f"[识别] {text}")
+
+            # ======= 处理计时 =======
+            # 结束计时
+            timer_end_time = time.perf_counter()
+            timer_process_time = timer_end_time - timer_start_time
+            rtf = timer_process_time / timer_audio_duration
+            print(f"[性能] 音频长度: {timer_audio_duration:.2f}s | "
+                  f"推理耗时: {timer_process_time:.3f}s | "
+                  f"RTF: {rtf:.2f} {'✅ 实时' if rtf < 1.0 else '❌ 超时'}")
+            
         except Exception as e:
             print(f"[识别错误] {e}", file=sys.stderr)
 
