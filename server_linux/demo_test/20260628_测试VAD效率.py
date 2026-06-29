@@ -11,13 +11,13 @@ from faster_whisper import WhisperModel
 import soundfile as sf
 
 # ================== 音频参数（与发送端一致） ==================
-SOURCE_SAMPLE_RATE = 44100          # 必须与发送端一致
+SAMPLE_RATE = 44100          # 必须与发送端一致
 CHANNELS = 2
 CHUNK = 1024                 # 每包帧数
 FORMAT = 'int16'             # 发送端使用 int16
 
 # ================== 音频输入 faster-whisper 模型参数 ==================
-TARGET_SAMPLE_RATE = 16000
+TARGET_SR = 16000
 
 # ================== UDP 接收配置 ==================
 UDP_PORT = 52210             # 与发送端目标端口一致
@@ -45,13 +45,15 @@ LANG = "en"
   - **作用**：**防抖过滤**。只有语音持续超过 0.3 秒，才会被送去识别。
   - **含义**：用来过滤掉“咔哒”声、键盘敲击声等瞬态噪音，避免空转 CPU。
 
+- **`MAX_SEGMENT_DURATION = 8.0`**
+  - **作用**：**强制“熔断”**。防止某人一直说话不停导致 `audio_buffer` 无限堆积。一旦攒够 8 秒音频，哪怕没有静音，也强制切开送去识别。
+  - **含义**：保证内存不会爆掉，也保证超大段语音能被及时处理。
 '''
 
 SILENCE_THRESHOLD = 0.01
 MIN_SILENCE_DURATION = 0.4
 MIN_SPEECH_DURATION = 0.3
-# 最大音频缓冲时间（累计判断是一句话未中断或持续无声音）
-MAX_SEGMENT_DURATION = 16.0
+MAX_SEGMENT_DURATION = 8.0
 
 
 '''
@@ -122,54 +124,55 @@ def udp_receiver():
         # 取平均转为单声道
         mono = np.mean(audio_float32, axis=1)
 
-        # 重采样到目标码率
-        target_rate_mono = librosa.resample(mono, orig_sr=SOURCE_SAMPLE_RATE, target_sr=TARGET_SAMPLE_RATE) if SOURCE_SAMPLE_RATE != TARGET_SAMPLE_RATE else mono
-
-        # 追加至缓冲区
+        # ---- 以下逻辑与原 audio_callback 完全相同 ----
         with buffer_lock:
-            audio_buffer = np.concatenate([audio_buffer, target_rate_mono])
+            audio_buffer = np.concatenate([audio_buffer, mono])
             # 检测是否有声音
-            if np.max(np.abs(target_rate_mono)) > SILENCE_THRESHOLD: speech_detected = True
+            if np.max(np.abs(mono)) > SILENCE_THRESHOLD:
+                silence_counter = 0.0
+                speech_detected = True
+                speech_length += len(mono) / SAMPLE_RATE
+            elif speech_detected:
+                silence_counter += len(mono) / SAMPLE_RATE
 
 # ================== 识别工作线程（与原代码完全相同） ==================
 def recognition_worker():
     global audio_buffer, silence_counter, speech_detected, speech_length
     while True:
-        time.sleep(1)
+        time.sleep(0.05)
         with buffer_lock:
             # 条件1：连续静音达到阈值，且语音长度足够
-            # if (speech_detected and
-            #     silence_counter >= MIN_SILENCE_DURATION and
-            #     speech_length >= MIN_SPEECH_DURATION and
-            #     len(audio_buffer) >= SAMPLE_RATE * MIN_SPEECH_DURATION):
-            #     segment = audio_buffer.copy()
-            #     audio_buffer = np.empty((0,), dtype=np.float32)
-            #     silence_counter = 0.0
-            #     speech_detected = False
-            #     speech_length = 0.0
-            # # 条件2：强制切断（避免等太久）
-            # elif len(audio_buffer) >= MAX_SEGMENT_DURATION * TARGET_SAMPLE_RATE:
-            #     segment = audio_buffer.copy()
-            #     audio_buffer = np.empty((0,), dtype=np.float32)
-            #     silence_counter = 0.0
-            #     speech_detected = False
-            #     speech_length = 0.0
-            if speech_detected:
-                segment = audio_buffer.copy()
-                speech_detected = False
-            elif len(audio_buffer) >= MAX_SEGMENT_DURATION * TARGET_SAMPLE_RATE:
+            if (speech_detected and
+                silence_counter >= MIN_SILENCE_DURATION and
+                speech_length >= MIN_SPEECH_DURATION and
+                len(audio_buffer) >= SAMPLE_RATE * MIN_SPEECH_DURATION):
                 segment = audio_buffer.copy()
                 audio_buffer = np.empty((0,), dtype=np.float32)
+                silence_counter = 0.0
                 speech_detected = False
+                speech_length = 0.0
+            # 条件2：强制切断（避免等太久）
+            elif len(audio_buffer) >= MAX_SEGMENT_DURATION * SAMPLE_RATE:
+                segment = audio_buffer.copy()
+                audio_buffer = np.empty((0,), dtype=np.float32)
+                silence_counter = 0.0
+                speech_detected = False
+                speech_length = 0.0
             else:
                 continue
         
         # 直接处理音频数据
         
+        # 1. 确保数据类型为 float32
+        segment = segment.astype(np.float32)
+
+        # 2. 重采样到 16kHz (如果原始采样率不是 16000)
+        if SAMPLE_RATE != TARGET_SR:
+            segment = librosa.resample(segment, orig_sr=SAMPLE_RATE, target_sr=TARGET_SR)
 
         # ======= 处理计时 =======
         # 记录音频实际时长（秒）
-        timer_audio_duration = len(segment) / TARGET_SAMPLE_RATE
+        timer_audio_duration = len(segment) / TARGET_SR
         # 开始计时
         timer_start_time = time.perf_counter()
 
@@ -191,7 +194,6 @@ def recognition_worker():
             for seg in segments:
                 text = seg.text.strip()
                 if text:
-                    print(f"[{segment.start:.2f}s -> {segment.end:.2f}s]")
                     print(f"[识别] {text}")
 
             # ======= 处理计时 =======
