@@ -154,7 +154,7 @@ def recognition_worker():
             elif len(audio_buffer) >= MAX_SEGMENT_DURATION_SIZE:
                 audio_buffer = np.empty((0,), dtype=np.float32)
         # 如果没有数据则跳过
-        if current_audio_buffer == None:
+        if current_audio_buffer is None:
             continue
 
         # ======= 推理提取的音频数据 =======
@@ -182,7 +182,7 @@ def recognition_worker():
             final_queue = []
             segments_list = list(segments)
             segments_endi = len(segments_list) - 1
-            for seg, i in enumerate(segments_list):
+            for i, seg in enumerate(segments_list):
                 # start           # 开始时间
                 # duration        # 段落时长
                 # original        # 原文
@@ -206,10 +206,10 @@ def recognition_worker():
                     # 如果最后一段存在前置音频（前面有至少0.5秒），则对最后一段音频进行剪裁并放回缓存
                     # 如果尾部存在大于 2.5秒 的无可检测音频则可以抛弃数据，可以认为是完全句式
                     if seg.start > 0.5 and timer_audio_duration - seg.end < 2.5:
-                        start_sample = int(seg.start * TARGET_SAMPLE_RATE)
-                        trimmed = current_audio_buffer[start_sample:]
+                        start_index = int(seg.start * TARGET_SAMPLE_RATE)
+                        start_sample = current_audio_buffer[start_index:]
                         with buffer_lock:
-                            audio_buffer = np.concatenate([trimmed, audio_buffer])
+                            audio_buffer = np.concatenate([start_sample, audio_buffer])
 
             # ======= 处理计时 =======
             # 结束计时

@@ -4,7 +4,7 @@
 安装 python3.12
 
 ```shell
-cd server_linux
+cd ~/LocalASR/server_linux
 
 # 建立一个专门存放环境的目录
 mkdir -p venv
