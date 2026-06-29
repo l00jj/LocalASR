@@ -220,14 +220,15 @@ def recognition_worker():
                 )
 
                 # 如果最后一段是超长句则执行强制截断（直接结束抛弃缓存）
-                if i == segments_endi and  tranResult.duration < MAX_SEGMENT_DURATION:
+                if i == segments_endi and tranResult.duration < MAX_SEGMENT_DURATION:
                     # 如果最后一段存在前置音频（前面有至少0.5秒），则对最后一段音频进行剪裁并放回缓存
                     # 如果尾部存在大于 2.5秒 的无可检测音频则可以抛弃数据，可以认为是完全句式
-                    if seg.start > 0.5 and timer_audio_duration - seg.end < 2.5:
+                    if seg.start > 0.5:
                         start_index = int(seg.start * TARGET_SAMPLE_RATE)
-                        start_sample = current_audio_buffer[start_index:]
+                        current_audio_buffer = current_audio_buffer[start_index:]
+                    if timer_audio_duration - seg.end < 2.5:
                         with buffer_lock:
-                            audio_buffer = np.concatenate([start_sample, audio_buffer])
+                            audio_buffer = np.concatenate([current_audio_buffer, audio_buffer])
 
             # ======= 处理计时 =======
             # 结束计时
