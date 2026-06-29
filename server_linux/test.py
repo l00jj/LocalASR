@@ -207,9 +207,9 @@ def recognition_worker():
                 text = seg.text.strip()
                 
 
-                print(f"[{seg.start:.2f}s -> {seg.end:.2f}s]")
-                print(f"[识别] {text}")
-                print(f"[{"最后一个" if i == segments_endi else "前"+str(i+1)+"个"}]")
+                print(f" {"●" if i == segments_endi else "○"} No.{str(i+1)} | {seg.start:.2f}s -> {seg.end:.2f}s")
+                print(f"[en] {text}")
+
                 if not text:
                     continue
 
@@ -221,12 +221,13 @@ def recognition_worker():
 
                 # 如果最后一段是超长句则执行强制截断（直接结束抛弃缓存）
                 if i == segments_endi and tranResult.duration < MAX_SEGMENT_DURATION:
-                    # 如果最后一段存在前置音频（前面有至少0.5秒），则对最后一段音频进行剪裁并放回缓存
-                    # 如果尾部存在大于 2.5秒 的无可检测音频则可以抛弃数据，可以认为是完全句式
-                    if seg.start > 0.5:
+                    # 如果最后一段存在前置音频（前面有至少 1 秒），则进行剪裁
+                    if seg.start > 1:
                         start_index = int(seg.start * TARGET_SAMPLE_RATE)
                         current_audio_buffer = current_audio_buffer[start_index:]
-                    if timer_audio_duration - seg.end < 2.5:
+                    # 如果尾部存在大于 2 秒 的无可检测音频则可以抛弃数据，可以认为是完全句式
+                    # ---------需要添加逻辑：放入确定的句式队列中
+                    if timer_audio_duration - seg.end < 2:
                         with buffer_lock:
                             audio_buffer = np.concatenate([current_audio_buffer, audio_buffer])
 
