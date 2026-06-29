@@ -205,11 +205,12 @@ def recognition_worker():
             for i, seg in enumerate(segments_list):
 
                 text = seg.text.strip()
-                if not text:
-                    continue
+                
 
                 print(f"[{seg.start:.2f}s -> {seg.end:.2f}s]")
                 print(f"[识别] {text}")
+                if not text:
+                    continue
 
                 tranResult = TranResult(
                     duration=seg.end - seg.start,
