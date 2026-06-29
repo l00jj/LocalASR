@@ -207,7 +207,7 @@ def recognition_worker():
                 text = seg.text.strip()
                 
 
-                print(f" {"●" if i == segments_endi else "○"} No.{str(i+1)} | {seg.start:.2f}s -> {seg.end:.2f}s")
+                print(f" {"○" if i == segments_endi else "●"} No.{str(i+1)} | {seg.start:.2f}s -> {seg.end:.2f}s")
                 print(f"[en] {text}")
 
                 if not text:
