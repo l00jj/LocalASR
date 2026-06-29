@@ -101,6 +101,26 @@ speech_length = 0.0
 volume_detected = False
 
 
+
+class TranResult:
+    """
+    存储单段语音识别结果，包含时间信息、原文及译文。
+
+    该类主要用于在识别流水线中传递数据，便于后续的翻译或日志记录。
+
+    Attributes:
+        start:       语音的标准时间（毫秒）
+        duration:    语音段落的时长（秒）
+        original:    识别出的原始英文文本
+        translation: 对应的中文翻译文本
+    """
+    def __init__(self, duration, original, translation):
+        self.duration = duration
+        self.original = original
+        self.translation = translation
+
+
+
 # ================== UDP 接收线程 ==================
 def udp_receiver():
     """持续接收 UDP 音频流，转换为 mono float32 并追加到 buffer"""
@@ -183,10 +203,6 @@ def recognition_worker():
             segments_list = list(segments)
             segments_endi = len(segments_list) - 1
             for i, seg in enumerate(segments_list):
-                # start           # 开始时间
-                # duration        # 段落时长
-                # original        # 原文
-                # translation     # 译文
 
                 text = seg.text.strip()
                 if not text:
@@ -195,14 +211,14 @@ def recognition_worker():
                 print(f"[{seg.start:.2f}s -> {seg.end:.2f}s]")
                 print(f"[识别] {text}")
 
-                item = {
-                    "duration": seg.end - seg.start,
-                    "original": text,
-                    "translation": ""
-                }
+                tranResult = TranResult(
+                    duration=seg.end - seg.start,
+                    original=text,
+                    translation=""
+                )
 
                 # 如果最后一段是超长句则执行强制截断（直接结束抛弃缓存）
-                if i == segments_endi and  item.duration < MAX_SEGMENT_DURATION:
+                if i == segments_endi and  tranResult.duration < MAX_SEGMENT_DURATION:
                     # 如果最后一段存在前置音频（前面有至少0.5秒），则对最后一段音频进行剪裁并放回缓存
                     # 如果尾部存在大于 2.5秒 的无可检测音频则可以抛弃数据，可以认为是完全句式
                     if seg.start > 0.5 and timer_audio_duration - seg.end < 2.5:
