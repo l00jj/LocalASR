@@ -209,7 +209,7 @@ def recognition_worker():
 
                 print(f"[{seg.start:.2f}s -> {seg.end:.2f}s]")
                 print(f"[识别] {text}")
-                print(f"[{"最后一个" if i == segments_endi else "前"+(i+1)+"个"}]")
+                print(f"[{"最后一个" if i == segments_endi else "前"+str(i+1)+"个"}]")
                 if not text:
                     continue
 
