@@ -155,10 +155,10 @@ def recognition_worker():
             #     speech_detected = False
             #     speech_length = 0.0
             if speech_detected:
-                segment = audio_buffer.copy()
+                current_audio_buffer = audio_buffer.copy()
                 speech_detected = False
             elif len(audio_buffer) >= MAX_SEGMENT_DURATION * TARGET_SAMPLE_RATE:
-                segment = audio_buffer.copy()
+                current_audio_buffer = audio_buffer.copy()
                 audio_buffer = np.empty((0,), dtype=np.float32)
                 speech_detected = False
             else:
@@ -169,14 +169,14 @@ def recognition_worker():
 
         # ======= 处理计时 =======
         # 记录音频实际时长（秒）
-        timer_audio_duration = len(segment) / TARGET_SAMPLE_RATE
+        timer_audio_duration = len(current_audio_buffer) / TARGET_SAMPLE_RATE
         # 开始计时
         timer_start_time = time.perf_counter()
 
 
         try:
             segments, _ = model.transcribe(
-                segment,
+                current_audio_buffer,
                 language=LANG,
                 beam_size=5,                                     # 搜索宽度，结果前 N 候选
                 vad_filter=True,
@@ -191,7 +191,7 @@ def recognition_worker():
             for seg in segments:
                 text = seg.text.strip()
                 if text:
-                    print(f"[{segment.start:.2f}s -> {segment.end:.2f}s]")
+                    print(f"[{seg.start:.2f}s -> {seg.end:.2f}s]")
                     print(f"[识别] {text}")
 
             # ======= 处理计时 =======
