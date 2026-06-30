@@ -246,8 +246,6 @@ def translation_worker():
             continue
 
         try:
-            print("xxxx")
-            print(item.original)
             translated = translate_text(item.original, "127.0.0.1:52208")
             item.translation = translated
             if translated:
@@ -255,6 +253,7 @@ def translation_worker():
                 print(f" - - - - - - ")
                 print(f"[原文] {item.original}")
                 print(f"[译文] {translated}")
+                print(f" - - - - - - ")
             else:
                 # 可打印警告
                 print(f"[译文] 翻译失败: {item.original}")
