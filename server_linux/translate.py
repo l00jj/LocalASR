@@ -8,7 +8,7 @@ DEFAULT_SERVER = "127.0.0.1:52208"
 
 def translate_text(text, server=None):
     """调用 llama-server (OpenAI兼容API) 翻译英文到中文"""
-    
+
     prompt = f"You are a professional translator. Translate the following English into Chinese. Reply ONLY with the Chinese translation, no extra words or explanation.\nEnglish: {text}\nChinese:"
     payload = {
         "prompt": prompt,
@@ -32,7 +32,7 @@ def translate_text(text, server=None):
         resp = requests.post(api_url, json=payload, timeout=15)
         if resp.status_code == 200:
             result = resp.json()
-            print(result)
+            # print(result)
             zh = result["choices"][0]["text"].strip()
             return zh
         else:
