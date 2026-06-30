@@ -6,17 +6,18 @@ import sys
 # 默认服务器地址（仅主机:端口），也可传入完整 base URL
 DEFAULT_SERVER = "127.0.0.1:52208"
 
-def translate_text(text, server=None):
-    """调用 llama-server (OpenAI兼容API) 翻译英文到中文"""
+def translate_text(source_text, server=None):
 
-    prompt = f"You are a professional translator. Translate the following English into Chinese. Reply ONLY with the Chinese translation, no extra words or explanation.\nEnglish: {text}\nChinese:"
+    prompt = f"将以下文本翻译为中文，注意只需要输出翻译后的结果，不要额外解释：\n{source_text}"
     payload = {
-        "prompt": prompt,
-        "n_predict": 128,
-        "temperature": 0.1,
-        "repeat_penalty": 1.1,
-        "stop": ["\n"],
-        "no_thought": True
+        "messages": [
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.7,
+        "max_tokens": 256,
+        "top_p": 0.6,
+        "top_k": 20,                     # llama.cpp 扩展参数，可直接放顶层
+        "repetition_penalty": 1.05,      # 同上
     }
 
     # 处理 server 参数
@@ -26,14 +27,14 @@ def translate_text(text, server=None):
     if not server.startswith(("http://", "https://")):
         server = f"http://{server}"
     # 拼接完整的 API 端点
-    api_url = f"{server}/v1/completions"
+    api_url = f"{server}/v1/chat/completions"
 
     try:
         resp = requests.post(api_url, json=payload, timeout=15)
         if resp.status_code == 200:
             result = resp.json()
             # print(result)
-            zh = result["choices"][0]["text"].strip()
+            zh = result["choices"][0]["message"]["content"].strip()
             return zh
         else:
             print(f"[翻译] 服务错误: {resp.text}", file=sys.stderr)
@@ -65,4 +66,6 @@ if __name__ == "__main__":
 
 '''
 python3 /Volumes/Room/app-git/LocalASR/server_linux/translate.py --c "Use this reference to look up OpenAI API endpoints, request and response schemas, streaming events, client library methods, and shared behavior such as authentication, errors, rate limits, and request IDs." --server 192.168.0.118:52208
+
+python3 ~/LocalASR/server_linux/translate.py --c "Use this reference to look up OpenAI API endpoints, request and response schemas, streaming events, client library methods, and shared behavior such as authentication, errors, rate limits, and request IDs." --server 127.0.0.1:52208
 '''

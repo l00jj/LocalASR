@@ -10,6 +10,9 @@ source ./venv/bin/activate
 tmux new-session -d -s llm '~/LocalASR/server_linux/translator/llama_vulkan/llama-server -m ~/LocalASR/server_linux/models/Qwen3-0.6B-GGUF/Qwen3-0.6B-Q4_K_M.gguf --host 0.0.0.0 --port 52208  -t 4 -ngl -1 --ctx-size 512 -lv 4'
 ```
 
+```shell
+~/LocalASR/server_linux/translator/llama_vulkan/llama-server -m ~/LocalASR/server_linux/models/Hy-MT2-1.8B-GGUF/Hy-MT2-1.8B-Q4_K_M.gguf --host 0.0.0.0 --port 52208 -t 4 -ngl -1 --ctx-size 512 -lv 4
+```
 
 
 
@@ -62,6 +65,25 @@ modelscope download --model 'Systran/faster-whisper-tiny.en' --local_dir "$tmp_p
 
 modelscope download --model 'Systran/faster-whisper-base.en' --local_dir "$tmp_path/faster-whisper-base.en"
 
-modelscope download --model 'unsloth/Qwen3-0.6B-GGUF' --include '*Q4_K_M*' --local_dir "$tmp_path/Qwen3-0.6B-GGUF"
+modelscope download --model 'Tencent-Hunyuan/Hy-MT2-1.8B-GGUF' --include '*Q4_K_M*' --local_dir "$tmp_path/Hy-MT2-1.8B-GGUF"
 ```
 
+
+
+### 翻译模型
+
+Tencent-Hunyuan/Hy-MT2-1.8B-GGUF
+https://www.modelscope.cn/models/Tencent-Hunyuan/Hy-MT2-1.8B-GGUF/files
+
+Tencent-Hunyuan/Hy-MT2-1.8B-1.25Bit-GGUF
+暂不支持 vulkan 推理
+https://www.modelscope.cn/models/Tencent-Hunyuan/Hy-MT2-1.8B-1.25Bit-GGUF/files
+
+Tencent-Hunyuan/Hy-MT2-1.8B-2Bit-GGUF
+暂不支持 vulkan 推理
+https://www.modelscope.cn/models/Tencent-Hunyuan/Hy-MT2-1.8B-2Bit-GGUF
+
+
+
+关键词使用参考：
+https://www.modelscope.cn/models/Tencent-Hunyuan/Hy-MT2-1.8B-2Bit-GGUF
