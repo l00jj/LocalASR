@@ -62,9 +62,9 @@ VAD_SPEECH_PAD_MS = 200
 '''
 
 VAD_THRESHOLD = 0.5
-VAD_MIN_SPEECH_MS = 250
+VAD_MIN_SPEECH_MS = 150
 VAD_MIN_SILENCE_MS = 300
-VAD_SPEECH_PAD_MS = 400
+VAD_SPEECH_PAD_MS = 600
 
 # ================== 模型路径 ==================
 print(f"加载识别模型: {MODEL_PATH}")
