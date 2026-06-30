@@ -57,7 +57,7 @@ def main():
     # 创建解析器
     parser = argparse.ArgumentParser(description="截获参数的示例")
     
-    # 定义你想要截获的参数
+    # 定义截获的参数
     parser.add_argument("--server", type=str, required=True, help="服务器地址")
     args = parser.parse_args()
     
