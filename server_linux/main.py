@@ -246,6 +246,8 @@ def translation_worker():
             continue
 
         try:
+            print("xxxx")
+            print(item.original)
             translated = translate_text(item.original, "127.0.0.1:52208")
             item.translation = translated
             if translated:
