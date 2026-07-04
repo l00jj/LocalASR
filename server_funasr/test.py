@@ -5,9 +5,12 @@ model = AutoModel(
     trust_remote_code=True,
     remote_code="./model.py",
     vad_model="fsmn-vad",
-    vad_kwargs={"max_single_segment_time": 30000},
+    vad_kwargs={
+        "max_single_segment_time": 30000,
+        "silence_duration": 800             # 关键：静音超过800ms就切分（默认可能更长）
+    },
     # device="cuda:0",
-    punc_model="ct-punc",
+    # punc_model="ct-punc",              # 没有用
     device="cpu",
     hub="ms",
 )
