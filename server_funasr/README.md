@@ -37,17 +37,13 @@ sudo apt install -y ffmpeg
 # 安装 FunASR
 pip install git+https://github.com/modelscope/FunASR.git@f9937385517cccaa8cd780b61c8b404c701c1d44
 
-git clone https://github.com/FunAudioLLM/Fun-ASR.git
+git clone https://github.com/FunAudioLLM/Fun-ASR.git@4492da201a440131104b6290ba094b87489dda6a
 
 # 安装必要库
 pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
 
-
-
 # 其他工具
 pip install modelscope requests -i https://pypi.tuna.tsinghua.edu.cn/simple
-
-
 
 ```
 

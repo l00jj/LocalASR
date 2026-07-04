@@ -9,10 +9,7 @@ model = AutoModel(
     vad_kwargs={
         "max_single_segment_time": 30000,
     },
-    # device="cuda:0",
-    # punc_model="ct-punc",              # 没有用
-    device="cpu",
-    hub="ms",
+    device="cpu"
 )
 
 # [计时器] 开始计时
