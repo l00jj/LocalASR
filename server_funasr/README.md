@@ -36,5 +36,10 @@ sudo apt install -y libasound2-dev
 # 安装 FunASR
 pip install git+https://github.com/modelscope/FunASR.git@f9937385517cccaa8cd780b61c8b404c701c1d44
 
+# 安装必要库
+pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+
+
+
 pip install pyalsaaudio modelscope soundfile librosa requests -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```

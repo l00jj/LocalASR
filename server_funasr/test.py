@@ -8,7 +8,7 @@ model = AutoModel(
     vad_kwargs={"max_single_segment_time": 30000},
     # device="cuda:0",
     device="cpu",
-    hub="ml",
+    hub="ms",
 )
 
 res = model.generate(input=["~/LocalASR/server_funasr/test.mp3"],
