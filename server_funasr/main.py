@@ -42,6 +42,9 @@ speech_length = 0.0
 volume_detected = False
 
 
+END_PUNCTUATION = {'。', '！', '？', '.', '!', '?'}
+
+
 # ================== 句子队列 ==================
 translation_queue = queue.Queue(maxsize=50)
 
@@ -153,8 +156,18 @@ def recognition_worker():
         except Exception as e:
             print(f"[识别错误] {e}", file=sys.stderr)
 
-        print(segments[0]["text"])
-        print(segments[0]["timestamps"])
+        if segments and segments[0] and segments[0]["timestamps"]:
+            cnt = 0
+            for item in segments[0]["timestamps"]:
+                token = item["token"]
+                if token in END_PUNCTUATION:
+                    cnt += 1
+            print(segments[0]["text"])
+            print(segments[0]["timestamps"])
+            print("结束", cnt)
+
+        
+            
         
         # 整理推理结果
         # segments_list = list(segments)
