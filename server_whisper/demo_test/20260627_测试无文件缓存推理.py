@@ -21,7 +21,7 @@ UDP_PORT = 52210             # 与发送端目标端口一致
 
 # ================== 识别模型配置 ==================
 # 模型实际路径
-MODEL_PATH = os.path.expanduser("~/LocalASR/server_linux/models/faster-whisper-base.en")
+MODEL_PATH = os.path.expanduser("~/LocalASR/server_whisper/models/faster-whisper-base.en")
 LANG = "en"
 
 # 低延迟断句参数（与原代码相同）

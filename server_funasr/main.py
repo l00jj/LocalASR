@@ -24,7 +24,7 @@ READABLE_BUFFER_SIZE = 5 * 1024 * 1024  # 5M 缓存
 
 # ================== 识别模型配置 ==================
 # 模型实际路径
-MODEL_PATH = os.path.expanduser("~/LocalASR/server_linux/models/faster-whisper-base.en")
+MODEL_PATH = os.path.expanduser("~/LocalASR/server_whisper/models/faster-whisper-base.en")
 LANG = "en"
 
 

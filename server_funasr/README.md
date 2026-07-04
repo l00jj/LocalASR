@@ -2,16 +2,16 @@
 ## 使用
 
 ```shell
-cd ~/LocalASR/server_linux
+cd ~/LocalASR/server_whisper
 source ./venv/bin/activate
 ```
 
 ```shell
-tmux new-session -d -s llm '~/LocalASR/server_linux/translator/llama_vulkan/llama-server -m ~/LocalASR/server_linux/models/Qwen3-0.6B-GGUF/Qwen3-0.6B-Q4_K_M.gguf --host 0.0.0.0 --port 52208  -t 4 -ngl -1 --ctx-size 512 -lv 4'
+tmux new-session -d -s llm '~/LocalASR/server_whisper/translator/llama_vulkan/llama-server -m ~/LocalASR/server_whisper/models/Qwen3-0.6B-GGUF/Qwen3-0.6B-Q4_K_M.gguf --host 0.0.0.0 --port 52208  -t 4 -ngl -1 --ctx-size 512 -lv 4'
 ```
 
 ```shell
-~/LocalASR/server_linux/translator/llama_vulkan/llama-server -m ~/LocalASR/server_linux/models/Hy-MT2-1.8B-GGUF/Hy-MT2-1.8B-Q4_K_M.gguf --host 0.0.0.0 --port 52208 -t 4 -ngl -1 --ctx-size 512 -lv 4
+~/LocalASR/server_whisper/translator/llama_vulkan/llama-server -m ~/LocalASR/server_whisper/models/Hy-MT2-1.8B-GGUF/Hy-MT2-1.8B-Q4_K_M.gguf --host 0.0.0.0 --port 52208 -t 4 -ngl -1 --ctx-size 512 -lv 4
 ```
 
 
@@ -23,7 +23,7 @@ tmux new-session -d -s llm '~/LocalASR/server_linux/translator/llama_vulkan/llam
 安装 python3.12
 
 ```shell
-cd ~/LocalASR/server_linux
+cd ~/LocalASR/server_whisper
 
 # 建立一个专门存放环境的目录
 mkdir -p venv
@@ -46,11 +46,11 @@ pip install pyalsaaudio modelscope soundfile librosa requests -i https://pypi.tu
 ### 部署 llama.cpp
 
 ```shell
-mkdir -p ~/LocalASR/server_linux/translator
+mkdir -p ~/LocalASR/server_whisper/translator
 ```
 
 ```shell
-cd ~/LocalASR/server_linux/translator && wget https://github.com/ggml-org/llama.cpp/releases/download/b9843/llama-b9843-bin-ubuntu-vulkan-x64.tar.gz && tar -xzvf llama-b9843-bin-ubuntu-vulkan-x64.tar.gz && mv llama-b9843 llama_vulkan
+cd ~/LocalASR/server_whisper/translator && wget https://github.com/ggml-org/llama.cpp/releases/download/b9843/llama-b9843-bin-ubuntu-vulkan-x64.tar.gz && tar -xzvf llama-b9843-bin-ubuntu-vulkan-x64.tar.gz && mv llama-b9843 llama_vulkan
 ```
 
 
@@ -59,7 +59,7 @@ cd ~/LocalASR/server_linux/translator && wget https://github.com/ggml-org/llama.
 
 ```shell
 # 模型列表路径
-tmp_path=~/LocalASR/server_linux/models
+tmp_path=~/LocalASR/server_whisper/models
 
 modelscope download --model 'Systran/faster-whisper-tiny.en' --local_dir "$tmp_path/faster-whisper-tiny.en"
 

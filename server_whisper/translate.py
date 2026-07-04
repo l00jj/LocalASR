@@ -65,7 +65,7 @@ if __name__ == "__main__":
 
 
 '''
-python3 /Volumes/Room/app-git/LocalASR/server_linux/translate.py --c "Use this reference to look up OpenAI API endpoints, request and response schemas, streaming events, client library methods, and shared behavior such as authentication, errors, rate limits, and request IDs." --server 192.168.0.118:52208
+python3 /Volumes/Room/app-git/LocalASR/server_whisper/translate.py --c "Use this reference to look up OpenAI API endpoints, request and response schemas, streaming events, client library methods, and shared behavior such as authentication, errors, rate limits, and request IDs." --server 192.168.0.118:52208
 
-python3 ~/LocalASR/server_linux/translate.py --c "Use this reference to look up OpenAI API endpoints, request and response schemas, streaming events, client library methods, and shared behavior such as authentication, errors, rate limits, and request IDs." --server 127.0.0.1:52208
+python3 ~/LocalASR/server_whisper/translate.py --c "Use this reference to look up OpenAI API endpoints, request and response schemas, streaming events, client library methods, and shared behavior such as authentication, errors, rate limits, and request IDs." --server 127.0.0.1:52208
 '''
