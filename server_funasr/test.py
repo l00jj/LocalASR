@@ -11,7 +11,7 @@ model = AutoModel(
     hub="ms",
 )
 
-res = model.generate(input=["~/LocalASR/server_funasr/test.mp3"],
+res = model.generate(input=["test.mp3"],
                     cache={}, batch_size=1,
                     hotwords=["keyword"], language="中文")
 print(res)
