@@ -4,7 +4,7 @@ from funasr import AutoModel
 model = AutoModel(
     model="./models/Fun-ASR-Nano-2512",
     trust_remote_code=True,
-    remote_code="./model.py",
+    remote_code="./Fun-ASR/model.py",
     vad_model="./models/speech_fsmn_vad_zh-cn-16k-common-pytorch",
     vad_kwargs={
         "max_single_segment_time": 30000,
