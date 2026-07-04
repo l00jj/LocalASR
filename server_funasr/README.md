@@ -31,7 +31,8 @@ source ./venv/bin/activate
 
 ```shell
 sudo apt update
-sudo apt install -y libasound2-dev
+# sudo apt install -y libasound2-dev
+sudo apt install -y ffmpeg
 
 # 安装 FunASR
 pip install git+https://github.com/modelscope/FunASR.git@f9937385517cccaa8cd780b61c8b404c701c1d44
