@@ -39,7 +39,9 @@ pip install git+https://github.com/modelscope/FunASR.git@f9937385517cccaa8cd780b
 # 安装必要库
 pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
 
-
-
-pip install pyalsaaudio modelscope soundfile librosa requests -i https://pypi.tuna.tsinghua.edu.cn/simple
+# 其他工具
+pip install modelscope requests -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
+
+
+
