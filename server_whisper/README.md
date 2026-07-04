@@ -59,10 +59,11 @@ cd ~/LocalASR/server_whisper/translator && wget https://github.com/ggml-org/llam
 
 ```shell
 # 模型列表路径
-tmp_path=~/LocalASR/server_funasr/models
+tmp_path=~/LocalASR/server_whisper/models
 
-modelscope download --model 'FunAudioLLM/Fun-ASR-Nano-2512' --local_dir "$tmp_path/Fun-ASR-Nano-2512"
+modelscope download --model 'Systran/faster-whisper-tiny.en' --local_dir "$tmp_path/faster-whisper-tiny.en"
 
+modelscope download --model 'Systran/faster-whisper-base.en' --local_dir "$tmp_path/faster-whisper-base.en"
 
 modelscope download --model 'Tencent-Hunyuan/Hy-MT2-1.8B-GGUF' --include '*Q4_K_M*' --local_dir "$tmp_path/Hy-MT2-1.8B-GGUF"
 ```
