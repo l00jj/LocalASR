@@ -158,10 +158,8 @@ def recognition_worker():
         except Exception as e:
             print(f"[识别错误] {e}", file=sys.stderr)
 
+        print(segments)
         if segments and segments[0] and segments[0]["timestamps"]:
-            
-            print(segments[0]["text"])
-            print(segments[0]["timestamps"])
 
             ishead = True
             start_time = 0
