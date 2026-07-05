@@ -178,7 +178,10 @@ def recognition_worker():
             print(f"[识别错误] {e}", file=sys.stderr)
 
         print(segments[0]["text"])
-        print(segments[0]["timestamp"])
+        # print(segments[0]["timestamp"])
+        print(segments)
+
+        audio_buffer = np.concatenate([current_audio_buffer, audio_buffer])
 
         # print(segments)
         # if "timestamps" in segments[0]:
