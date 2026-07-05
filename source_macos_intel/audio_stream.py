@@ -1,6 +1,7 @@
 import argparse
 import sounddevice as sd
 import socket
+import time
 import numpy as np
 import sys
 
@@ -30,26 +31,21 @@ device_id = find_blackhole_device()
 # 创建 UDP socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-def audio_callback(indata, frames, time, status):
+def audio_callback(indata, frames, pa_time, status):
     """
     回调函数：当音频数据可用时，通过 UDP 发送
     indata: numpy 数组，shape=(frames, channels)，dtype=int16
     """
     if status:
         print(f"音频状态: {status}", flush=True)
+
+    # 发送端：获取纳秒秒时间戳并转为毫秒 8 字节大端序
+    time_header = int(time.time_ns() // 1000).to_bytes(8, 'big')    # 8 字节
+
     # 将音频数据转为 bytes 并发送
     # indata 是 int16 类型，直接 tobytes() 即可
-    sock.sendto(indata.tobytes(), (target_ip, target_port))
 
-# 打开音频输入流（使用回调模式）
-stream = sd.InputStream(
-    device=device_id,
-    channels=CHANNELS,
-    samplerate=SAMPLE_RATE,
-    dtype=FORMAT,
-    blocksize=CHUNK,
-    callback=audio_callback
-)
+    sock.sendto(time_header + indata.tobytes(), (target_ip, target_port))
 
 
 def main():
@@ -65,6 +61,16 @@ def main():
     target_server = args.server
     target_ip, port_str = target_server.rsplit(':', 1)
     target_port = int(port_str)
+
+    # 打开音频输入流（使用回调模式）
+    stream = sd.InputStream(
+        device=device_id,
+        channels=CHANNELS,
+        samplerate=SAMPLE_RATE,
+        dtype=FORMAT,
+        blocksize=CHUNK,
+        callback=audio_callback
+    )
     
     # --- 启动前先测试 UDP 连通性 ---
     print(f"推理服务器入口: {target_server}")

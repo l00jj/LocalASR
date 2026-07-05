@@ -6,7 +6,6 @@ import sys
 import time
 import socket
 import queue
-from collections import deque
 from faster_whisper import WhisperModel
 import soundfile as sf
 
@@ -20,8 +19,8 @@ FORMAT = 'int16'                    # 发送端使用 int16
 TARGET_SAMPLE_RATE = 16000
 
 # ================== UDP 接收配置 ==================
-UDP_PORT = 52210                        # 与发送端目标端口一致
-READABLE_BUFFER_SIZE = 1024 * 1024 * 7  # 7M 缓存
+UDP_PORT = 52210                    # 与发送端目标端口一致
+READABLE_BUFFER_SIZE = 5 * 1024 * 1024  # 5M 缓存
 
 # ================== 识别模型配置 ==================
 # 模型实际路径
@@ -71,10 +70,8 @@ print(f"加载识别模型: {MODEL_PATH}")
 model = WhisperModel(MODEL_PATH, device="cpu", compute_type="int8")
 
 # ================== 全局音频缓冲区参数 ==================
-
+audio_buffer = np.empty((0,), dtype=np.float32)   # mono float32
 buffer_lock = threading.Lock()
-audio_buffer = np.empty((0,), dtype=np.float32)   # 音频块 float32
-audio_buffer_time_ms = 0
 silence_counter = 0.0
 speech_length = 0.0
 # 音量探测
@@ -100,12 +97,12 @@ class TranResult:
         translation: 对应的中文翻译文本
         final:       该结果是否为最终信息
     """
-    def __init__(self, start=0, duration="", original="", translation="", final=False):
-        self.start = start
+    def __init__(self, duration, original, final):
+        self.start = 0
         self.duration = duration
         self.original = original
-        self.translation = translation
-        self.final = final
+        self.translation = ""
+        self.final = True
 
 
 
@@ -113,7 +110,7 @@ class TranResult:
 # ================== UDP 接收线程 ==================
 def udp_receiver():
     """持续接收 UDP 音频流，转换为 mono float32 并追加到 buffer"""
-    global audio_buffer, audio_buffer_time_ms, silence_counter, volume_detected, speech_length
+    global audio_buffer, silence_counter, volume_detected, speech_length
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind(("0.0.0.0", UDP_PORT))
@@ -123,21 +120,13 @@ def udp_receiver():
 
     while True:
         try:
-            # [0:8] 数据头部 8 字节为时间戳
-            # [8:] CHUNK * CHANNELS * FORMAT （帧数块 * 通道数 * 采样点占用字节数）
-            data, addr = sock.recvfrom(8 + CHUNK * CHANNELS * 2)
+            data, addr = sock.recvfrom(CHUNK * CHANNELS * 2)  # 1024*2*2 = 4096 字节
         except Exception as e:
             print(f"UDP 接收错误: {e}", file=sys.stderr)
             continue
-        
-        # 时间戳数据
-        time_data = data[:8]
-        timestamp_ms = int.from_bytes(time_data, 'big')
 
-        # 音频数据
-        audio_data = data[8:]
         # 将 bytes 转为 int16 numpy 数组 (shape: (CHUNK*CHANNELS,))
-        audio_int16 = np.frombuffer(audio_data, dtype=np.int16)
+        audio_int16 = np.frombuffer(data, dtype=np.int16)
         # 重塑为 (frames, channels)
         audio_int16 = audio_int16.reshape(-1, CHANNELS)
         # 转为 float32 并归一化到 [-1, 1]
@@ -150,8 +139,6 @@ def udp_receiver():
 
         # 追加至缓冲区
         with buffer_lock:
-            duration_ms = int(len(audio_buffer) * 1000 // TARGET_SAMPLE_RATE)
-            audio_buffer_time_ms = duration_ms + timestamp_ms
             audio_buffer = np.concatenate([audio_buffer, target_rate_mono])
             # 检测是否有声音
             if np.max(np.abs(target_rate_mono)) > SILENCE_THRESHOLD:
@@ -162,20 +149,15 @@ def udp_receiver():
 
 # ================== 识别工作线程 ==================
 def recognition_worker():
-    global audio_buffer, audio_buffer_time_ms, silence_counter, volume_detected, speech_length
+    global audio_buffer, silence_counter, volume_detected, speech_length
     while True:
         time.sleep(TIME_INFERENCE_INTERVAL)
 
         # ======= 提取当前缓存的音频数据 =======
         current_audio_buffer = None
-        current_audio_buffer_timestamp_ms = 0
         with buffer_lock:
-            if audio_buffer_time_ms == 0:
-                continue
             if volume_detected:
                 current_audio_buffer = audio_buffer.copy()
-                current_audio_buffer_timestamp_ms = audio_buffer_time_ms
-                audio_buffer_time_ms = 0
                 audio_buffer = np.empty((0,), dtype=np.float32)
                 volume_detected = False
             elif len(audio_buffer) >= MAX_SEGMENT_DURATION_SIZE:
@@ -213,55 +195,48 @@ def recognition_worker():
         # 整理推理结果
         segments_list = list(segments)
         segments_endi = len(segments_list) - 1
-        split_time = -1
         for i, seg in enumerate(segments_list):
             text = seg.text.strip()
             
+            print(f"{"○" if i == segments_endi else "●"} No.{str(i+1)} | {seg.start:.2f}s -> {seg.end:.2f}s")
+            print(f"[en] {text}")
+
             if not text:
                 continue
 
-            # 如果句子结束离音频结束大于 2.5 秒才算正式句子
             tranResult = TranResult(
-                start=current_audio_buffer_timestamp_ms + int(seg.start * 1000),
                 duration = seg.end - seg.start,
                 original = text,
-                final = timer_audio_duration - seg.end > 2.5
+                final = True
             )
 
-            print(f"{"●" if tranResult.final else "○"} No.{str(i+1)} | {seg.start:.2f}s -> {seg.end:.2f}s")
-            print(f"[en] {tranResult.original}")
-
-            if not tranResult.final and split_time == -1:
-                split_time = seg.start
-
-            # 提交翻译
-            try:
-                if tranResult.final:
-                    translation_queue.put_nowait(tranResult)
-            except queue.Full:
-                print("队列满了！")
-
-        
-        ################ 如果最后一段是超长句则执行强制截断（直接结束抛弃缓存）
-        # if i == segments_endi and tranResult.duration < MAX_SEGMENT_DURATION:
-
-        if split_time != -1:
-            # 如果非正式段存在前置无效音（前面有至少 1 秒），则进行剪裁  
-            if split_time > 1:
-                start_index = int(seg.start * TARGET_SAMPLE_RATE)
-                current_audio_buffer = current_audio_buffer[start_index:]
-
-            with buffer_lock:
-                audio_buffer = np.concatenate([current_audio_buffer, audio_buffer])
+            # 如果最后一段是超长句则执行强制截断（直接结束抛弃缓存）
+            if i == segments_endi and tranResult.duration < MAX_SEGMENT_DURATION:
+                # 如果最后一段存在前置无效音（前面有至少 1 秒），则进行剪裁
+                if seg.start > 1:
+                    start_index = int(seg.start * TARGET_SAMPLE_RATE)
+                    current_audio_buffer = current_audio_buffer[start_index:]
+                # 如果最后句子尾部离音频结束小于 2 秒，则定为不完整句式 final=False，回存到缓存头部
+                # 反之则可以认为是完全句式，尾部存在无可检测音频则可以抛弃当前数据，记录为正式句子
+                if timer_audio_duration - seg.end < 2:
+                    tranResult.final = False
+                    with buffer_lock:
+                        audio_buffer = np.concatenate([current_audio_buffer, audio_buffer])
             
+            # 提交翻译
+            # try:
+            #     if tranResult.final:
+            #         translation_queue.put_nowait(tranResult)
+            # except queue.Full:
+            #     print("队列满了！")
 
-        # [计时器] 结束计时
-        timer_end_time = time.perf_counter()
-        timer_process_time = timer_end_time - timer_start_time
-        rtf = timer_process_time / timer_audio_duration
-        print(f"[性能] 音频长度: {timer_audio_duration:.2f}s | "
-                f"推理耗时: {timer_process_time:.3f}s | RTF: {rtf:.2f} | "
-                f"{'✅ 实时' if timer_process_time < TIME_INFERENCE_INTERVAL else '❌ 超时'}")
+            # [计时器] 结束计时
+            timer_end_time = time.perf_counter()
+            timer_process_time = timer_end_time - timer_start_time
+            rtf = timer_process_time / timer_audio_duration
+            print(f"[性能] 音频长度: {timer_audio_duration:.2f}s | "
+                  f"推理耗时: {timer_process_time:.3f}s | RTF: {rtf:.2f} | "
+                  f"{'✅ 实时' if timer_process_time < TIME_INFERENCE_INTERVAL else '❌ 超时'}")
 
 
 

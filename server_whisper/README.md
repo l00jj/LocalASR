@@ -90,7 +90,7 @@ modelscope download --model 'Systran/faster-whisper-tiny.en' --local_dir "$tmp_p
 
 modelscope download --model 'Systran/faster-whisper-base.en' --local_dir "$tmp_path/faster-whisper-base.en"
 
-
+需要 3G 内存，约 7 倍速度
 modelscope download --model 'Systran/faster-whisper-small' --local_dir "$tmp_path/faster-whisper-small"
 
 需要 12G 内存，约 3 倍速度
