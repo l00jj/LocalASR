@@ -64,12 +64,12 @@ class TranResult:
         translation: 对应的中文翻译文本
         final:       该结果是否为最终信息
     """
-    def __init__(self, duration, original, final):
+    def __init__(self, duration=0, original="", translation="", final=False):
         self.start = 0
         self.duration = duration
         self.original = original
-        self.translation = ""
-        self.final = True
+        self.translation = translation
+        self.final = final
 
 
 
@@ -120,6 +120,8 @@ def recognition_worker():
         remote_code="./Fun-ASR/model.py",
         vad_model="./models/speech_fsmn_vad_zh-cn-16k-common-pytorch",
         vad_kwargs={ "max_single_segment_time": 30000 },
+        log_level="WARNING",              # 只显示警告和错误信息
+        ncpu=8,                           # 设置使用线程，默认是 4
         device="cpu"
     )
 
@@ -157,90 +159,93 @@ def recognition_worker():
             print(f"[识别错误] {e}", file=sys.stderr)
 
         if segments and segments[0] and segments[0]["timestamps"]:
-            cnt = 0
-            for item in segments[0]["timestamps"]:
-                token = item["token"]
-                if token in END_PUNCTUATION:
-                    cnt += 1
+            
             print(segments[0]["text"])
             print(segments[0]["timestamps"])
-            print("结束", cnt)
 
-        
+            ishead = True
+            start_time = 0
+            end_time = 0
+            tranResult = TranResult()
+            for item in segments[0]["timestamps"]:
+                token = item["token"]
+
+                # 定义句子节点初始信息
+                if ishead:
+                    ishead = False
+                    start_time = item.start_time
+                    tranResult.duration = 0
+                    tranResult.original = ""
+                    
+                # 累计句子信息
+                end_time = item.start_time
+                tranResult.duration = end_time - start_time
+                tranResult.original += token
+
+                # 判断句子是否结尾
+                if token.rstrip()[-1] in END_PUNCTUATION:
+                    tranResult.final = True
+                    # 提交翻译
+                    try:
+                        translation_queue.put_nowait(tranResult)
+                    except queue.Full:
+                        print("队列满了！")
+                    # 重置节点
+                    ishead = True
+                    tranResult = TranResult()
+
+            # 如果最后一段是超长句则执行强制截断（直接结束抛弃缓存）
+            # if i == segments_endi and tranResult.duration < MAX_SEGMENT_DURATION:
+            if not ishead:
+                print(tranResult.original)
+                # 如果最后一段存在前置无效音（前面有至少 1 秒），则进行剪裁
+                if start_time > 1:
+                    start_index = int(start_time * TARGET_SAMPLE_RATE)
+                    current_audio_buffer = current_audio_buffer[start_index:]
+                # 如果最后句子尾部离音频结束小于 2 秒，则定为不完整句式 final=False，回存到缓存头部
+                # 反之则可以认为是完全句式，尾部存在无可检测音频则可以抛弃当前数据，记录为正式句子
+                if timer_audio_duration - end_time < 2:
+                    volume_detected = True
+                    with buffer_lock:
+                        audio_buffer = np.concatenate([current_audio_buffer, audio_buffer])
             
-        
-        # 整理推理结果
-        # segments_list = list(segments)
-        # segments_endi = len(segments_list) - 1
-        # for i, seg in enumerate(segments_list):
-        #     text = seg.text.strip()
-            
-        #     print(f"{"○" if i == segments_endi else "●"} No.{str(i+1)} | {seg.start:.2f}s -> {seg.end:.2f}s")
-        #     print(f"[en] {text}")
+      
 
-        #     if not text:
-        #         continue
-
-        #     tranResult = TranResult(
-        #         duration = seg.end - seg.start,
-        #         original = text,
-        #         final = True
-        #     )
-
-        #     # 如果最后一段是超长句则执行强制截断（直接结束抛弃缓存）
-        #     if i == segments_endi and tranResult.duration < MAX_SEGMENT_DURATION:
-        #         # 如果最后一段存在前置无效音（前面有至少 1 秒），则进行剪裁
-        #         if seg.start > 1:
-        #             start_index = int(seg.start * TARGET_SAMPLE_RATE)
-        #             current_audio_buffer = current_audio_buffer[start_index:]
-        #         # 如果最后句子尾部离音频结束小于 2 秒，则定为不完整句式 final=False，回存到缓存头部
-        #         # 反之则可以认为是完全句式，尾部存在无可检测音频则可以抛弃当前数据，记录为正式句子
-        #         if timer_audio_duration - seg.end < 2:
-        #             tranResult.final = False
-        #             with buffer_lock:
-        #                 audio_buffer = np.concatenate([current_audio_buffer, audio_buffer])
-            
-        #     # 提交翻译
-        #     try:
-        #         if tranResult.final:
-        #             translation_queue.put_nowait(tranResult)
-        #     except queue.Full:
-        #         print("队列满了！")
-
-        #     # [计时器] 结束计时
-        #     timer_end_time = time.perf_counter()
-        #     timer_process_time = timer_end_time - timer_start_time
-        #     rtf = timer_process_time / timer_audio_duration
-        #     print(f"[性能] 音频长度: {timer_audio_duration:.2f}s | "
-        #           f"推理耗时: {timer_process_time:.3f}s | RTF: {rtf:.2f} | "
-        #           f"{'✅ 实时' if timer_process_time < TIME_INFERENCE_INTERVAL else '❌ 超时'}")
+        # [计时器] 结束计时
+        timer_end_time = time.perf_counter()
+        timer_process_time = timer_end_time - timer_start_time
+        rtf = timer_process_time / timer_audio_duration
+        print(f"[性能] 音频长度: {timer_audio_duration:.2f}s | "
+                f"推理耗时: {timer_process_time:.3f}s | RTF: {rtf:.2f} | "
+                f"{'✅ 实时' if timer_process_time < TIME_INFERENCE_INTERVAL else '❌ 超时'}")
 
 # ================== 翻译工作线程 ==================
 # from translate import translate_text
-# def translation_worker():
-#     """从队列取出 TranResult 对象，调用翻译 API 并更新 translation 字段"""
-#     while True:
-#         try:
-#             item: TranResult = translation_queue.get(timeout=1.0)
-#         except queue.Empty:
-#             continue
+def translation_worker():
+    """从队列取出 TranResult 对象，调用翻译 API 并更新 translation 字段"""
+    while True:
+        try:
+            item: TranResult = translation_queue.get(timeout=1.0)
+        except queue.Empty:
+            continue
 
-#         try:
-#             translated = translate_text(item.original, "127.0.0.1:52208")
-#             item.translation = translated
-#             if translated:
-#                 # 你可以在这里打印或通过其他方式输出译文
-#                 print(f" - - - - - - ")
-#                 print(f"[原文] {item.original}")
-#                 print(f"[译文] {translated}")
-#                 print(f" - - - - - - ")
-#             else:
-#                 # 可打印警告
-#                 print(f"[译文] 翻译失败: {item.original}")
-#         except Exception as e:
-#             print(f"[翻译线程] 异常: {e}", file=sys.stderr)
-#         finally:
-#             translation_queue.task_done()
+        try:
+            print(f"[原文] {item.original}")
+        #     translated = translate_text(item.original, "127.0.0.1:52208")
+        #     item.translation = translated
+        #     if translated:
+        #         # 你可以在这里打印或通过其他方式输出译文
+        #         print(f" - - - - - - ")
+        #         print(f"[原文] {item.original}")
+        #         print(f"[译文] {translated}")
+        #         print(f" - - - - - - ")
+        #     else:
+        #         # 可打印警告
+        #         print(f"[译文] 翻译失败: {item.original}")
+        except Exception as e:
+            print(f"[翻译线程] 异常: {e}", file=sys.stderr)
+        finally:
+            translation_queue.task_done()
 
 
 # ================== 启动线程 ==================
@@ -250,8 +255,8 @@ udp_thread.start()
 recog_thread = threading.Thread(target=recognition_worker, daemon=True)
 recog_thread.start()
 
-# trans_thread = threading.Thread(target=translation_worker, daemon=True)
-# trans_thread.start()
+trans_thread = threading.Thread(target=translation_worker, daemon=True)
+trans_thread.start()
 
 print("实时语音识别已启动（从 UDP 接收音频流），按 Ctrl+C 停止...")
 try:
