@@ -173,12 +173,12 @@ def recognition_worker():
                 # 定义句子节点初始信息
                 if ishead:
                     ishead = False
-                    start_time = item.start_time
+                    start_time = item["start_time"]
                     tranResult.duration = 0
                     tranResult.original = ""
                     
                 # 累计句子信息
-                end_time = item.start_time
+                end_time = item["end_time"]
                 tranResult.duration = end_time - start_time
                 tranResult.original += token
 
