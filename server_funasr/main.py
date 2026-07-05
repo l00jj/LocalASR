@@ -120,8 +120,8 @@ def recognition_worker():
         remote_code="./Fun-ASR/model.py",
         vad_model="./models/speech_fsmn_vad_zh-cn-16k-common-pytorch",
         vad_kwargs={ "max_single_segment_time": 30000 },
-        log_level="WARNING",              # 只显示警告和错误信息
-        ncpu=8,                           # 设置使用线程，默认是 4
+        # log_level="WARNING",              # 只显示警告和错误信息
+        ncpu=8,                           # 设置使用线程，默认是 4（8可以保存较好的速度）
         device="cpu"
     )
 
@@ -181,7 +181,7 @@ def recognition_worker():
                 tranResult.original += token
 
                 # 判断句子是否结尾
-                if token.rstrip()[-1] in END_PUNCTUATION:
+                if token.rstrip()[-1] in END_PUNCTUATION and timer_audio_duration - end_time > 2:
                     tranResult.final = True
                     # 提交翻译
                     try:
