@@ -1,11 +1,9 @@
 
 ## 使用
 
-内存需求
-Fun-ASR-Nano-2512 | 10G
 
 ```shell
-cd ~/LocalASR/server_funasr
+cd ~/LocalASR/server_paraformer
 source ./venv/bin/activate
 ```
 
@@ -19,7 +17,7 @@ source ./venv/bin/activate
 安装 python3.12
 
 ```shell
-cd ~/LocalASR/server_funasr
+cd ~/LocalASR/server_paraformer
 
 # 建立一个专门存放环境的目录
 mkdir -p venv
@@ -40,7 +38,7 @@ sudo apt install -y ffmpeg
 # 安装 FunASR
 pip install git+https://github.com/modelscope/FunASR.git@f9937385517cccaa8cd780b61c8b404c701c1d44
 
-git clone https://github.com/FunAudioLLM/Fun-ASR.git@4492da201a440131104b6290ba094b87489dda6a
+# git clone https://github.com/FunAudioLLM/Fun-ASR.git@4492da201a440131104b6290ba094b87489dda6a
 
 # 安装必要库
 pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu

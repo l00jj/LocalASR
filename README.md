@@ -21,10 +21,15 @@ git config --global --unset http.proxy && git config --global --unset https.prox
 
 ## 资料
 
+
+
+### ASR FunAudioLLM/Fun-ASR-Nano-2512
+https://www.modelscope.cn/models/FunAudioLLM/Fun-ASR-Nano-2512
+轻量多语言 ASR，31 languages
+
 ### ASR Qwen/Qwen3-ASR-1.7B
 https://www.modelscope.cn/models/Qwen/Qwen3-ASR-1.7B
 当前效果最佳的 ASR
-
 
 ### 翻译模型 Hy-MT2-1.8B
 https://www.modelscope.cn/models/Tencent-Hunyuan/Hy-MT2-1.8B-GGUF/files
