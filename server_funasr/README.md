@@ -1,6 +1,9 @@
 
 ## 使用
 
+内存需求
+Fun-ASR-Nano-2512 | 10G
+
 ```shell
 cd ~/LocalASR/server_funasr
 source ./venv/bin/activate
