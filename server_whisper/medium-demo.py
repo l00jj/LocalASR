@@ -24,9 +24,8 @@ READABLE_BUFFER_SIZE = 5 * 1024 * 1024  # 5M 缓存
 
 # ================== 识别模型配置 ==================
 # 模型实际路径
-MODEL_PATH = os.path.expanduser("~/LocalASR/server_whisper/models/faster-whisper-medium")
+MODEL_PATH = os.path.expanduser("~/LocalASR/server_whisper/models/faster-whisper-small")
 LANG = "en"          # 不指定 None，
-
 
 # ================== 推理参数 ==================
 # 推理间隔 (秒)
@@ -40,7 +39,7 @@ MAX_SEGMENT_DURATION_SIZE = MAX_SEGMENT_DURATION * TARGET_SAMPLE_RATE
 
 '''
 模型层参数
-faster-whisper 自带的 VAD 滤波器用于判断音频人声片段
+faster-whisper 的 VAD 滤波器用于判断音频人声片段
 
 VAD_THRESHOLD = 0.5
 语音检测的敏感度。值越高（越接近 1），只有非常像人声的才会保留；值越低，越容易把噪音当人声
