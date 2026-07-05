@@ -121,7 +121,7 @@ def recognition_worker():
         vad_model="./models/speech_fsmn_vad_zh-cn-16k-common-pytorch",
         vad_kwargs={ "max_single_segment_time": 30000 },
         log_level="WARNING",              # 只显示警告和错误信息
-        ncpu=4,                           # 设置使用线程，默认是 4
+        ncpu=4,                           # 设置使用线程，默认是 4（8t需要10G内存）
         device="cpu"
     )
 
