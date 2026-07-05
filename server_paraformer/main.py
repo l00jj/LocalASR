@@ -114,25 +114,35 @@ def udp_receiver():
 def recognition_worker():
     global audio_buffer, silence_counter, volume_detected, speech_length
 
+    
     model = AutoModel(
-        model="./models/Fun-ASR-Nano-2512",
-        # hotwords=["开放时间"],
-        # 中文、英文、日文 for Fun-ASR-Nano-2512
-        # 韩文、越南语、印尼语、泰语、马来语、菲律宾语、阿拉伯语、
-        # 印地语、保加利亚语、克罗地亚语、捷克语、丹麦语、荷兰语、爱沙尼亚语、芬兰语、希腊语、
-        # 匈牙利语、爱尔兰语、拉脱维亚语、立陶宛语、马耳他语、波兰语、葡萄牙语、罗马尼亚语、
-        # 斯洛伐克语、斯洛文尼亚语、瑞典语 for Fun-ASR-MLT-Nano-2512
-        language="英文",
-        # itn=True, # 用于数字规范
-
-        trust_remote_code=True,
-        remote_code="./Fun-ASR/model.py",
-        vad_model="./models/speech_fsmn_vad_zh-cn-16k-common-pytorch",
-        vad_kwargs={ "max_single_segment_time": 30000 },
-        # log_level="WARNING",              # 只显示警告和错误信息
-        ncpu=8,                           # 设置使用线程，默认是 4（8可以保存较好的速度）
-        device="cpu"
+        model="./models/Paraformer-zh",          # ch en
+        vad_model="./models/fsmn-vad",           # handles any audio length
+        vad_kwargs={"max_single_segment_time": 30000},
+        punc_model="./models/ct-punc",           # adds punctuation
     )
+    
+    # model = AutoModel(
+    #     model="./models/Fun-ASR-Nano-2512",
+    #     # hotwords=["开放时间"],
+    #     # 中文、英文、日文 for Fun-ASR-Nano-2512
+    #     # 韩文、越南语、印尼语、泰语、马来语、菲律宾语、阿拉伯语、
+    #     # 印地语、保加利亚语、克罗地亚语、捷克语、丹麦语、荷兰语、爱沙尼亚语、芬兰语、希腊语、
+    #     # 匈牙利语、爱尔兰语、拉脱维亚语、立陶宛语、马耳他语、波兰语、葡萄牙语、罗马尼亚语、
+    #     # 斯洛伐克语、斯洛文尼亚语、瑞典语 for Fun-ASR-MLT-Nano-2512
+    #     language="英文",
+    #     # itn=True, # 用于数字规范
+
+    #     trust_remote_code=True,
+    #     remote_code="./Fun-ASR/model.py",
+    #     vad_model="./models/speech_fsmn_vad_zh-cn-16k-common-pytorch",
+    #     vad_kwargs={ "max_single_segment_time": 30000 },
+    #     # log_level="WARNING",              # 只显示警告和错误信息
+    #     ncpu=8,                           # 设置使用线程，默认是 4（8可以保存较好的速度）
+    #     device="cpu"
+    # )
+
+
 
 
     while True:
@@ -161,60 +171,63 @@ def recognition_worker():
 
         # 推理
         try:
-            segments = model.generate(input=[current_audio_buffer],
-                    cache={}, batch_size=1,
-                    hotwords=["keyword"], language="auto")
+            segments = model.generate(
+                input=current_audio_buffer,
+                batch_size_s=300)
         except Exception as e:
             print(f"[识别错误] {e}", file=sys.stderr)
 
-        print(segments)
-        if "timestamps" in segments[0]:
+        print(segments[0]["text"])
+        print(segments[0]["timestamp"])
 
-            ishead = True
-            start_time = 0
-            end_time = 0
-            tranResult = TranResult()
-            for item in segments[0]["timestamps"]:
-                token = item["token"]
+        # print(segments)
+        # if "timestamps" in segments[0]:
 
-                # 定义句子节点初始信息
-                if ishead:
-                    ishead = False
-                    start_time = item["start_time"]
-                    tranResult.duration = 0
-                    tranResult.original = ""
+        #     ishead = True
+        #     start_time = 0
+        #     end_time = 0
+        #     tranResult = TranResult()
+        #     for item in segments[0]["timestamps"]:
+        #         token = item["token"]
+
+        #         # 定义句子节点初始信息
+        #         if ishead:
+        #             ishead = False
+        #             start_time = item["start_time"]
+        #             tranResult.duration = 0
+        #             tranResult.original = ""
                     
-                # 累计句子信息
-                end_time = item["end_time"]
-                tranResult.duration = end_time - start_time
-                tranResult.original += token
+        #         # 累计句子信息
+        #         end_time = item["end_time"]
+        #         tranResult.duration = end_time - start_time
+        #         tranResult.original += token
 
-                # 判断句子是否结尾
-                if token.rstrip()[-1] in END_PUNCTUATION and timer_audio_duration - end_time > 2:
-                    tranResult.final = True
-                    # 提交翻译
-                    try:
-                        translation_queue.put_nowait(tranResult)
-                    except queue.Full:
-                        print("队列满了！")
-                    # 重置节点
-                    ishead = True
-                    tranResult = TranResult()
+        #         # 判断句子是否结尾
+        #         if token.rstrip()[-1] in END_PUNCTUATION and timer_audio_duration - end_time > 2:
+        #             tranResult.final = True
+        #             # 提交翻译
+        #             try:
+        #                 translation_queue.put_nowait(tranResult)
+        #             except queue.Full:
+        #                 print("队列满了！")
+        #             # 重置节点
+        #             ishead = True
+        #             tranResult = TranResult()
 
-            # 如果最后一段是超长句则执行强制截断（直接结束抛弃缓存）
-            # if i == segments_endi and tranResult.duration < MAX_SEGMENT_DURATION:
-            if not ishead:
-                print(tranResult.original)
-                # 如果最后一段存在前置无效音（前面有至少 1 秒），则进行剪裁
-                if start_time > 1:
-                    start_index = int(start_time * TARGET_SAMPLE_RATE)
-                    current_audio_buffer = current_audio_buffer[start_index:]
-                # 如果最后句子尾部离音频结束小于 2 秒，则定为不完整句式 final=False，回存到缓存头部
-                # 反之则可以认为是完全句式，尾部存在无可检测音频则可以抛弃当前数据，记录为正式句子
-                if timer_audio_duration - end_time < 2:
-                    volume_detected = True
-                    with buffer_lock:
-                        audio_buffer = np.concatenate([current_audio_buffer, audio_buffer])
+        #     # 如果最后一段是超长句则执行强制截断（直接结束抛弃缓存）
+        #     # if i == segments_endi and tranResult.duration < MAX_SEGMENT_DURATION:
+        #     if not ishead:
+        #         print(tranResult.original)
+        #         # 如果最后一段存在前置无效音（前面有至少 1 秒），则进行剪裁
+        #         if start_time > 1:
+        #             start_index = int(start_time * TARGET_SAMPLE_RATE)
+        #             current_audio_buffer = current_audio_buffer[start_index:]
+        #         # 如果最后句子尾部离音频结束小于 2 秒，则定为不完整句式 final=False，回存到缓存头部
+        #         # 反之则可以认为是完全句式，尾部存在无可检测音频则可以抛弃当前数据，记录为正式句子
+        #         if timer_audio_duration - end_time < 2:
+        #             volume_detected = True
+        #             with buffer_lock:
+        #                 audio_buffer = np.concatenate([current_audio_buffer, audio_buffer])
             
       
 

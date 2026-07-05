@@ -9,7 +9,6 @@ source ./venv/bin/activate
 
 
 
-
 ## 部署
 
 ### 部署 Python 环境
@@ -55,12 +54,16 @@ pip install modelscope requests -i https://pypi.tuna.tsinghua.edu.cn/simple
 ### 下载模型
 
 ```shell
+mkdir -p models
+
 # 模型列表路径
-tmp_path=~/LocalASR/server_funasr/models
+tmp_path=~/LocalASR/server_paraformer/models
 
-modelscope download --model 'FunAudioLLM/Fun-ASR-Nano-2512' --local_dir "$tmp_path/Fun-ASR-Nano-2512"
+modelscope download --model 'iic/speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-pytorch' --local_dir "$tmp_path/Paraformer-zh"
 
-modelscope download --model 'iic/speech_fsmn_vad_zh-cn-16k-common-pytorch' --local_dir "$tmp_path/speech_fsmn_vad_zh-cn-16k-common-pytorch"
+modelscope download --model 'iic/speech_fsmn_vad_zh-cn-16k-common-pytorch' --local_dir "$tmp_path/fsmn-vad"
+
+modelscope download --model 'iic/punc_ct-transformer_cn-en-common-vocab471067-large' --local_dir "$tmp_path/ct-punc"
 
 modelscope download --model 'Tencent-Hunyuan/Hy-MT2-1.8B-GGUF' --include '*Q4_K_M*' --local_dir "$tmp_path/Hy-MT2-1.8B-GGUF"
 ```

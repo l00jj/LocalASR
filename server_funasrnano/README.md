@@ -58,7 +58,7 @@ pip install modelscope requests -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 ```shell
 # 模型列表路径
-tmp_path=~/LocalASR/server_funasr/models
+tmp_path=~/LocalASR/server_funasrnano/models
 
 modelscope download --model 'FunAudioLLM/Fun-ASR-Nano-2512' --local_dir "$tmp_path/Fun-ASR-Nano-2512"
 
