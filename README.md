@@ -21,8 +21,6 @@ git config --global --unset http.proxy && git config --global --unset https.prox
 
 ## 资料
 
-
-
 ### ASR FunAudioLLM/Fun-ASR-Nano-2512
 https://www.modelscope.cn/models/FunAudioLLM/Fun-ASR-Nano-2512
 轻量多语言 ASR，31 languages

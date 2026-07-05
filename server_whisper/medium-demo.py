@@ -24,7 +24,7 @@ READABLE_BUFFER_SIZE = 5 * 1024 * 1024  # 5M 缓存
 
 # ================== 识别模型配置 ==================
 # 模型实际路径
-MODEL_PATH = os.path.expanduser("~/LocalASR/server_whisper/models/faster-whisper-base.en")
+MODEL_PATH = os.path.expanduser("~/LocalASR/server_whisper/models/faster-whisper-medium")
 LANG = "en"          # 不指定 None，
 
 
@@ -107,6 +107,7 @@ class TranResult:
 
 
 
+
 # ================== UDP 接收线程 ==================
 def udp_receiver():
     """持续接收 UDP 音频流，转换为 mono float32 并追加到 buffer"""
@@ -143,6 +144,9 @@ def udp_receiver():
             # 检测是否有声音
             if np.max(np.abs(target_rate_mono)) > SILENCE_THRESHOLD:
                 volume_detected = True
+
+
+
 
 # ================== 识别工作线程 ==================
 def recognition_worker():
@@ -221,11 +225,11 @@ def recognition_worker():
                         audio_buffer = np.concatenate([current_audio_buffer, audio_buffer])
             
             # 提交翻译
-            try:
-                if tranResult.final:
-                    translation_queue.put_nowait(tranResult)
-            except queue.Full:
-                print("队列满了！")
+            # try:
+            #     if tranResult.final:
+            #         translation_queue.put_nowait(tranResult)
+            # except queue.Full:
+            #     print("队列满了！")
 
             # [计时器] 结束计时
             timer_end_time = time.perf_counter()
@@ -235,32 +239,35 @@ def recognition_worker():
                   f"推理耗时: {timer_process_time:.3f}s | RTF: {rtf:.2f} | "
                   f"{'✅ 实时' if timer_process_time < TIME_INFERENCE_INTERVAL else '❌ 超时'}")
 
-# ================== 翻译工作线程 ==================
-from translate import translate_text
-def translation_worker():
-    """从队列取出 TranResult 对象，调用翻译 API 并更新 translation 字段"""
-    while True:
-        try:
-            item: TranResult = translation_queue.get(timeout=1.0)
-        except queue.Empty:
-            continue
 
-        try:
-            translated = translate_text(item.original, "127.0.0.1:52208")
-            item.translation = translated
-            if translated:
-                # 你可以在这里打印或通过其他方式输出译文
-                print(f" - - - - - - ")
-                print(f"[原文] {item.original}")
-                print(f"[译文] {translated}")
-                print(f" - - - - - - ")
-            else:
-                # 可打印警告
-                print(f"[译文] 翻译失败: {item.original}")
-        except Exception as e:
-            print(f"[翻译线程] 异常: {e}", file=sys.stderr)
-        finally:
-            translation_queue.task_done()
+
+
+# ================== 翻译工作线程 ==================
+# from translate import translate_text
+# def translation_worker():
+#     """从队列取出 TranResult 对象，调用翻译 API 并更新 translation 字段"""
+#     while True:
+#         try:
+#             item: TranResult = translation_queue.get(timeout=1.0)
+#         except queue.Empty:
+#             continue
+
+#         try:
+#             translated = translate_text(item.original, "127.0.0.1:52208")
+#             item.translation = translated
+#             if translated:
+#                 # 你可以在这里打印或通过其他方式输出译文
+#                 print(f" - - - - - - ")
+#                 print(f"[原文] {item.original}")
+#                 print(f"[译文] {translated}")
+#                 print(f" - - - - - - ")
+#             else:
+#                 # 可打印警告
+#                 print(f"[译文] 翻译失败: {item.original}")
+#         except Exception as e:
+#             print(f"[翻译线程] 异常: {e}", file=sys.stderr)
+#         finally:
+#             translation_queue.task_done()
 
 
 # ================== 启动线程 ==================
@@ -270,12 +277,13 @@ udp_thread.start()
 recog_thread = threading.Thread(target=recognition_worker, daemon=True)
 recog_thread.start()
 
-trans_thread = threading.Thread(target=translation_worker, daemon=True)
-trans_thread.start()
+# trans_thread = threading.Thread(target=translation_worker, daemon=True)
+# trans_thread.start()
 
 print("实时语音识别已启动（从 UDP 接收音频流），按 Ctrl+C 停止...")
 try:
     while True:
         time.sleep(0.5)
+    # threading.Event().wait()
 except KeyboardInterrupt:
     print("\n停止识别")

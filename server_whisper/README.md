@@ -40,6 +40,8 @@ source ./venv/bin/activate
 sudo apt update
 sudo apt install -y libasound2-dev
 
+pip install faster-whisper -i https://pypi.tuna.tsinghua.edu.cn/simple
+
 pip install pyalsaaudio modelscope soundfile librosa requests -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
@@ -61,13 +63,32 @@ cd ~/LocalASR/server_whisper/translator && wget https://github.com/ggml-org/llam
 # 模型列表路径
 tmp_path=~/LocalASR/server_whisper/models
 
-modelscope download --model 'Systran/faster-whisper-tiny.en' --local_dir "$tmp_path/faster-whisper-tiny.en"
-
-modelscope download --model 'Systran/faster-whisper-base.en' --local_dir "$tmp_path/faster-whisper-base.en"
+modelscope download --model 'Systran/faster-whisper-medium' --local_dir "$tmp_path/faster-whisper-medium"
 
 modelscope download --model 'Tencent-Hunyuan/Hy-MT2-1.8B-GGUF' --include '*Q4_K_M*' --local_dir "$tmp_path/Hy-MT2-1.8B-GGUF"
 ```
 
+## 资料
+
+### faster-whisper
+
+https://github.com/SYSTRAN/faster-whisper
+
+### 模型列表
+
+https://www.modelscope.cn/collections/himyworld/faster-whisper
+
+Size	Parameters	English-only	Multilingual
+tiny	39 M	✓	✓
+base	74 M	✓	✓
+small	244 M	✓	✓
+medium	769 M	✓	✓
+large	1550 M	x	✓
+large-v2	1550 M	x	✓
+
+modelscope download --model 'Systran/faster-whisper-tiny.en' --local_dir "$tmp_path/faster-whisper-tiny.en"
+
+modelscope download --model 'Systran/faster-whisper-base.en' --local_dir "$tmp_path/faster-whisper-base.en"
 
 
 ### 翻译模型
@@ -82,8 +103,6 @@ https://www.modelscope.cn/models/Tencent-Hunyuan/Hy-MT2-1.8B-1.25Bit-GGUF/files
 Tencent-Hunyuan/Hy-MT2-1.8B-2Bit-GGUF
 暂不支持 vulkan 推理
 https://www.modelscope.cn/models/Tencent-Hunyuan/Hy-MT2-1.8B-2Bit-GGUF
-
-
 
 关键词使用参考：
 https://www.modelscope.cn/models/Tencent-Hunyuan/Hy-MT2-1.8B-2Bit-GGUF
