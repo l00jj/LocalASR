@@ -121,7 +121,7 @@ def recognition_worker():
         vad_model="./models/speech_fsmn_vad_zh-cn-16k-common-pytorch",
         vad_kwargs={ "max_single_segment_time": 30000 },
         log_level="WARNING",              # 只显示警告和错误信息
-        ncpu=8,                           # 设置使用线程，默认是 4
+        ncpu=4,                           # 设置使用线程，默认是 4
         device="cpu"
     )
 
@@ -159,7 +159,7 @@ def recognition_worker():
             print(f"[识别错误] {e}", file=sys.stderr)
 
         print(segments)
-        if segments and segments[0] and segments[0]["timestamps"]:
+        if "timestamps" in segments[0]:
 
             ishead = True
             start_time = 0
