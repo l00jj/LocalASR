@@ -16,3 +16,19 @@ git config --global credential.helper 'cache --timeout=86400'
 # 取消代理
 git config --global --unset http.proxy && git config --global --unset https.proxy
 ```
+
+
+
+## 资料
+
+### ASR Qwen/Qwen3-ASR-1.7B
+https://www.modelscope.cn/models/Qwen/Qwen3-ASR-1.7B
+当前效果最佳的 ASR
+
+
+### 翻译模型 Hy-MT2-1.8B
+https://www.modelscope.cn/models/Tencent-Hunyuan/Hy-MT2-1.8B-GGUF/files
+
+### 字幕时间轴对齐模型 Qwen3-ForcedAligner-0.6B
+https://www.modelscope.cn/models/Qwen/Qwen3-ForcedAligner-0.6B
+将音频与文字一并输入，返回文字对齐到音频的时间轴

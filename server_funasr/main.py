@@ -116,6 +116,15 @@ def recognition_worker():
 
     model = AutoModel(
         model="./models/Fun-ASR-Nano-2512",
+        # hotwords=["开放时间"],
+        # 中文、英文、日文 for Fun-ASR-Nano-2512
+        # 韩文、越南语、印尼语、泰语、马来语、菲律宾语、阿拉伯语、
+        # 印地语、保加利亚语、克罗地亚语、捷克语、丹麦语、荷兰语、爱沙尼亚语、芬兰语、希腊语、
+        # 匈牙利语、爱尔兰语、拉脱维亚语、立陶宛语、马耳他语、波兰语、葡萄牙语、罗马尼亚语、
+        # 斯洛伐克语、斯洛文尼亚语、瑞典语 for Fun-ASR-MLT-Nano-2512
+        language="英文",
+        # itn=True, # 用于数字规范
+
         trust_remote_code=True,
         remote_code="./Fun-ASR/model.py",
         vad_model="./models/speech_fsmn_vad_zh-cn-16k-common-pytorch",
