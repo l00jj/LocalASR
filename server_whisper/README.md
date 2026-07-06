@@ -7,13 +7,8 @@ source ./venv/bin/activate
 ```
 
 ```shell
-tmux new-session -d -s llm '~/LocalASR/server_whisper/translator/llama_vulkan/llama-server -m ~/LocalASR/server_whisper/models/Qwen3-0.6B-GGUF/Qwen3-0.6B-Q4_K_M.gguf --host 0.0.0.0 --port 52208  -t 4 -ngl -1 --ctx-size 512 -lv 4'
+tmux new-session -d -s llm '~/LocalASR/server_whisper/translator/llama_vulkan/llama-server -m ~/LocalASR/server_whisper/models/Hy-MT2-1.8B-GGUF/Hy-MT2-1.8B-Q4_K_M.gguf --host 0.0.0.0 --port 52208 -t 4 -ngl -1 --ctx-size 512 -lv 4'
 ```
-
-```shell
-~/LocalASR/server_whisper/translator/llama_vulkan/llama-server -m ~/LocalASR/server_whisper/models/Hy-MT2-1.8B-GGUF/Hy-MT2-1.8B-Q4_K_M.gguf --host 0.0.0.0 --port 52208 -t 4 -ngl -1 --ctx-size 512 -lv 4
-```
-
 
 
 ## 部署
@@ -63,7 +58,7 @@ cd ~/LocalASR/server_whisper/translator && wget https://github.com/ggml-org/llam
 # 模型列表路径
 tmp_path=~/LocalASR/server_whisper/models
 
-modelscope download --model 'Systran/faster-whisper-medium' --local_dir "$tmp_path/faster-whisper-medium"
+modelscope download --model 'Systran/faster-whisper-small' --local_dir "$tmp_path/faster-whisper-small"
 
 modelscope download --model 'Tencent-Hunyuan/Hy-MT2-1.8B-GGUF' --include '*Q4_K_M*' --local_dir "$tmp_path/Hy-MT2-1.8B-GGUF"
 ```
