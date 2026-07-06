@@ -247,7 +247,7 @@ def recognition_worker():
 
         if split_time != -1:
             # 如果非正式段存在前置无效音（前面有至少 1 秒），则进行剪裁  
-            print(split_time)
+            # print(split_time)
             if split_time > 1:
                 start_index = int(split_time * TARGET_SAMPLE_RATE)
                 current_audio_buffer = current_audio_buffer[start_index:]
@@ -268,31 +268,31 @@ def recognition_worker():
 
 
 # ================== 翻译工作线程 ==================
-# from translate import translate_text
-# def translation_worker():
-#     """从队列取出 TranResult 对象，调用翻译 API 并更新 translation 字段"""
-#     while True:
-#         try:
-#             item: TranResult = translation_queue.get(timeout=1.0)
-#         except queue.Empty:
-#             continue
+from translate import translate_text
+def translation_worker():
+    """从队列取出 TranResult 对象，调用翻译 API 并更新 translation 字段"""
+    while True:
+        try:
+            item: TranResult = translation_queue.get(timeout=1.0)
+        except queue.Empty:
+            continue
 
-#         try:
-#             translated = translate_text(item.original, "127.0.0.1:52208")
-#             item.translation = translated
-#             if translated:
-#                 # 你可以在这里打印或通过其他方式输出译文
-#                 print(f" - - - - - - ")
-#                 print(f"[原文] {item.original}")
-#                 print(f"[译文] {translated}")
-#                 print(f" - - - - - - ")
-#             else:
-#                 # 可打印警告
-#                 print(f"[译文] 翻译失败: {item.original}")
-#         except Exception as e:
-#             print(f"[翻译线程] 异常: {e}", file=sys.stderr)
-#         finally:
-#             translation_queue.task_done()
+        try:
+            translated = translate_text(item.original, "127.0.0.1:52208")
+            item.translation = translated
+            if translated:
+                # 你可以在这里打印或通过其他方式输出译文
+                print(f" - - - - - - ")
+                print(f"[原文] {item.original}")
+                print(f"[译文] {translated}")
+                print(f" - - - - - - ")
+            else:
+                # 可打印警告
+                print(f"[译文] 翻译失败: {item.original}")
+        except Exception as e:
+            print(f"[翻译线程] 异常: {e}", file=sys.stderr)
+        finally:
+            translation_queue.task_done()
 
 
 # ================== 启动线程 ==================
@@ -302,8 +302,8 @@ udp_thread.start()
 recog_thread = threading.Thread(target=recognition_worker, daemon=True)
 recog_thread.start()
 
-# trans_thread = threading.Thread(target=translation_worker, daemon=True)
-# trans_thread.start()
+trans_thread = threading.Thread(target=translation_worker, daemon=True)
+trans_thread.start()
 
 print("实时语音识别已启动（从 UDP 接收音频流），按 Ctrl+C 停止...")
 try:
