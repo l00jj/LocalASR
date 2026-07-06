@@ -276,6 +276,9 @@ def translation_worker():
             item: TranResult = translation_queue.get(timeout=1.0)
         except queue.Empty:
             continue
+        
+        # [计时器] 开始计时
+        timer_start_time = time.perf_counter()
 
         try:
             translated = translate_text(item.original, "127.0.0.1:52208")
@@ -288,11 +291,18 @@ def translation_worker():
                 print(f" - - - - - - ")
             else:
                 # 可打印警告
-                print(f"[译文] 翻译失败: {item.original}")
+                print(f"[翻译失败]异常: {item.original}")
         except Exception as e:
             print(f"[翻译线程] 异常: {e}", file=sys.stderr)
         finally:
             translation_queue.task_done()
+        
+        # [计时器] 结束计时
+        timer_end_time = time.perf_counter()
+        timer_process_time = timer_end_time - timer_start_time
+        print(f"翻译耗时: {timer_process_time:.3f}s | {'✅ 实时' if timer_process_time < TIME_INFERENCE_INTERVAL else '❌ 超时'}")
+
+
 
 
 # ================== 启动线程 ==================
