@@ -247,9 +247,8 @@ def recognition_worker():
 
         if split_time != -1:
             # 如果非正式段存在前置无效音（前面有至少 1 秒），则进行剪裁  
-            print(split_time)
             if split_time > 1:
-                start_index = int(seg.start * TARGET_SAMPLE_RATE)
+                start_index = int(split_time * TARGET_SAMPLE_RATE)
                 current_audio_buffer = current_audio_buffer[start_index:]
 
             with buffer_lock:
