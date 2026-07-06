@@ -220,12 +220,12 @@ def recognition_worker():
             if not text:
                 continue
 
-            # 如果句子结束离音频结束大于 2.5 秒才算正式句子
+            # 如果句子结束离音频结束大于 2 秒才算正式句子
             tranResult = TranResult(
                 start=current_audio_buffer_timestamp_ms + int(seg.start * 1000),
                 duration = seg.end - seg.start,
                 original = text,
-                final = timer_audio_duration - seg.end > 2.5
+                final = timer_audio_duration - seg.end > 2
             )
 
             print(f"{"●" if tranResult.final else "○"} No.{str(i+1)} | {seg.start:.2f}s -> {seg.end:.2f}s")
@@ -247,6 +247,7 @@ def recognition_worker():
 
         if split_time != -1:
             # 如果非正式段存在前置无效音（前面有至少 1 秒），则进行剪裁  
+            print(start_index)
             if split_time > 1:
                 start_index = int(split_time * TARGET_SAMPLE_RATE)
                 current_audio_buffer = current_audio_buffer[start_index:]
