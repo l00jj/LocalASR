@@ -133,7 +133,10 @@ class WebBroadcast:
         while self._running:
             try:
                 results = await self.send_queue.get()
-                print(results)
+                print(f"results type: {type(results)}")
+                print(f"first item type: {type(results[0]) if results else 'empty'}")
+                print(results[0])
+                print(results[0].original)
                 # 序列化为 JSON
                 try:
                     # message = json.dumps(asdict(results), ensure_ascii=False)
