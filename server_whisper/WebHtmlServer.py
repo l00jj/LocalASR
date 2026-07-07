@@ -2,10 +2,12 @@
 # -*- coding: utf-8 -*-
 
 import os
+import socket
+import http.server
+import urllib.parse
 import threading
 import time
-from http.server import HTTPServer, SimpleHTTPRequestHandler
-import netifaces
+
 
 def get_all_local_ips():
     ips = []
@@ -18,34 +20,69 @@ def get_all_local_ips():
                 ips.append(ip)
     return ips
 
+
 class WebHtmlServer:
     """
-    简单的静态文件 HTTP 服务器，提供 ./webui 目录下的文件。
-    默认首页为 index.html。
+    安全的静态文件 HTTP 服务器，只服务于指定目录（默认为 ./webui）。
+    特性：
+        - 仅允许访问目录内的文件（禁止路径遍历）
+        - 自动返回 index.html 作为默认页面
+        - 禁止目录列表（访问目录返回 404）
+        - 启动时打印本地和局域网访问地址
     """
 
-    def __init__(self, port: int = 8080):
+    def __init__(self, port: int = 8080, web_dir: str = 'webui'):
         """
-        :param port: 监听端口
+        :param port:     监听端口
+        :param web_dir:  静态文件根目录（相对于当前工作目录）
         """
         self.port = port
-        self.server = None
+        self.web_dir = os.path.abspath(web_dir)
+        if not os.path.isdir(self.web_dir):
+            raise FileNotFoundError(f"静态目录不存在: {self.web_dir}")
+        self._server = None
         self._running = False
 
     def start(self):
-        """启动 HTTP 服务器（阻塞）"""
-        # 确定 webui 目录路径（相对于当前工作目录）
-        web_dir = os.path.join(os.getcwd(), 'webui')
-        if not os.path.isdir(web_dir):
-            raise FileNotFoundError(f"静态目录 'webui' 不存在于 {web_dir}")
+        """启动 HTTP 服务（阻塞）"""
+        # 捕获 web_dir 供 Handler 使用
+        web_dir = self.web_dir
 
-        # 自定义 Handler，指定根目录
-        class Handler(SimpleHTTPRequestHandler):
-            directory = web_dir   # Python 3.7+ 支持
+        # 自定义请求处理器
+        class SecureHandler(http.server.SimpleHTTPRequestHandler):
+            def __init__(self, *args, **kwargs):
+                # Python 3.7+ 支持 directory 参数，强制指定根目录
+                super().__init__(*args, directory=web_dir, **kwargs)
 
-        self.server = HTTPServer(('0.0.0.0', self.port), Handler)
+            def list_directory(self, path):
+                """禁用目录列表，直接返回 404"""
+                self.send_error(404, "Not Found")
+                return None
+
+            def translate_path(self, path):
+                """
+                重写路径转换，增加安全检查，防止目录遍历攻击（如 /../etc/passwd）
+                """
+                # 去除查询字符串
+                path = urllib.parse.urlparse(path).path
+                # 去除前导斜杠，并拼接根目录
+                if path.startswith('/'):
+                    path = path[1:]
+                full_path = os.path.join(self.directory, path)
+                # 规范化路径（解析 .. 和符号链接）
+                full_path = os.path.realpath(full_path)
+                # 检查路径是否仍在根目录内
+                if not full_path.startswith(os.path.realpath(self.directory) + os.sep):
+                    # 越界访问，返回一个不存在的文件路径，导致 404
+                    return os.path.join(self.directory, 'FORBIDDEN')
+                return full_path
+
+        # 创建服务器
+        self._server = http.server.HTTPServer(
+            ('0.0.0.0', self.port), SecureHandler)
         self._running = True
 
+        # 获取局域网地址
         # 打印访问地址
         print(f"✅ Web 服务已启动")
         print(f"   根目录: {web_dir}")
@@ -53,7 +90,7 @@ class WebHtmlServer:
             print(f"   web: http://{item}:{self.port}")
 
         try:
-            self.server.serve_forever()
+            self._server.serve_forever()
         except KeyboardInterrupt:
             self.stop()
         finally:
@@ -61,34 +98,31 @@ class WebHtmlServer:
 
     def stop(self):
         """停止服务器"""
-        if self.server:
-            self.server.shutdown()
-            self.server.server_close()
+        if self._server:
+            self._server.shutdown()
+            self._server.server_close()
             print("🛑 Web 服务已停止")
 
 
-# ---------- 测试入口 ----------
+# ---------- 独立测试入口 ----------
 if __name__ == '__main__':
-    # 导入 WebBroadcast（假设与当前文件同目录）
-    from WebBroadcast import WebBroadcast
-    import time
-    import threading
+    from WebBroadcast import WebBroadcast   # 假设同目录存在
 
-    # 1. 启动 WebSocket 广播服务
+    # 1. 启动 WebSocket 广播服务（测试用）
     broadcast = WebBroadcast(port=52218, max_queue_size=20, max_clients=10)
     broadcast.start()
     print("WebSocket 广播服务已启动")
 
-    # 2. 启动 Web 服务器（在独立线程中，避免阻塞主线程）
-    html_server = WebHtmlServer(port=52280)
-    server_thread = threading.Thread(target=html_server.start, daemon=True)
+    # 2. 启动 Web 服务器（在独立线程中运行）
+    web_server = WebHtmlServer(port=52280, web_dir='webui')   # 使用与之前一致的端口
+    server_thread = threading.Thread(target=web_server.start, daemon=True)
     server_thread.start()
 
     # 3. 主线程持续发送测试消息
     count = 0
     try:
         while True:
-            time.sleep(2)
+            time.sleep(3)
             count += 1
             test_data = [{
                 "start": count * 1000,
@@ -103,4 +137,4 @@ if __name__ == '__main__':
         print("\n🛑 停止测试...")
     finally:
         broadcast.stop()
-        html_server.stop()
+        web_server.stop()
