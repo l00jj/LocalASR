@@ -88,6 +88,7 @@ if __name__ == '__main__':
     count = 0
     try:
         while True:
+            time.sleep(2)
             count += 1
             test_data = [{
                 "start": count * 1000,
@@ -98,7 +99,6 @@ if __name__ == '__main__':
             }]
             broadcast.send(test_data)
             print(f"📨 发送广播 #{count}")
-            time.sleep(2)
     except KeyboardInterrupt:
         print("\n🛑 停止测试...")
     finally:

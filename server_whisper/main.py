@@ -322,7 +322,7 @@ collection_thread.start()
 print("实时语音识别已启动（从 UDP 接收音频流），按 Ctrl+C 停止...")
 try:
     while True:
-        time.sleep(0.5)
+        time.sleep(2)
     # threading.Event().wait()
 except KeyboardInterrupt:
     print("\n停止识别")
