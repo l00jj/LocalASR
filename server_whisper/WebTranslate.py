@@ -32,6 +32,8 @@ def translate_text(source_text: str, to_lang: str, server: str) -> Tuple[bool, s
         if resp.status_code == 200:
             result = resp.json()
             tran_test = result["choices"][0]["message"]["content"].strip()
+            print(f"[翻译-原文] {source_text}")
+            print(f"[翻译-译文] {tran_test}")
             return (True, tran_test)
         else:
             print(f"[翻译环节] 服务器状态: {resp.text}", file=sys.stderr)
