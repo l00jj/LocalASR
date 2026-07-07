@@ -74,11 +74,8 @@ model = WhisperModel(MODEL_PATH, device="cpu", compute_type="int8")
 
 buffer_lock = threading.Lock()
 audio_buffer = np.empty((0,), dtype=np.float32)   # 音频块 float32
-audio_buffer_time_ms = 0
-silence_counter = 0.0
-speech_length = 0.0
-# 音量探测
-volume_detected = False
+audio_timestamp_ms = 0                            # 音频的头部时间戳
+volume_detected = False                           # 音频内是否有声音
 
 
 # ================== 句子队列 ==================
@@ -112,7 +109,7 @@ class TranResult:
 # ================== UDP 接收线程 ==================
 def udp_receiver():
     """持续接收 UDP 音频流，转换为 mono float32 并追加到 buffer"""
-    global audio_buffer, audio_buffer_time_ms, silence_counter, volume_detected, speech_length
+    global audio_buffer, audio_timestamp_ms, volume_detected
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind(("0.0.0.0", UDP_PORT))
@@ -150,7 +147,7 @@ def udp_receiver():
         # 追加至缓冲区
         with buffer_lock:
             duration_ms = int(len(audio_buffer) * 1000 // TARGET_SAMPLE_RATE)
-            audio_buffer_time_ms = duration_ms + timestamp_ms
+            audio_timestamp_ms = duration_ms + timestamp_ms
             audio_buffer = np.concatenate([audio_buffer, target_rate_mono])
             # 检测是否有声音
             if np.max(np.abs(target_rate_mono)) > SILENCE_THRESHOLD:
@@ -161,7 +158,7 @@ def udp_receiver():
 
 # ================== 识别工作线程 ==================
 def recognition_worker():
-    global audio_buffer, audio_buffer_time_ms, silence_counter, volume_detected, speech_length
+    global audio_buffer, audio_timestamp_ms, volume_detected
     while True:
         time.sleep(TIME_INFERENCE_INTERVAL)
 
@@ -169,12 +166,12 @@ def recognition_worker():
         current_audio_buffer = None
         current_audio_buffer_timestamp_ms = 0
         with buffer_lock:
-            if audio_buffer_time_ms == 0:
+            if audio_timestamp_ms == 0:
                 continue
             if volume_detected:
                 current_audio_buffer = audio_buffer.copy()
-                current_audio_buffer_timestamp_ms = audio_buffer_time_ms
-                audio_buffer_time_ms = 0
+                current_audio_buffer_timestamp_ms = audio_timestamp_ms
+                audio_timestamp_ms = 0
                 audio_buffer = np.empty((0,), dtype=np.float32)
                 volume_detected = False
             elif len(audio_buffer) >= MAX_SEGMENT_DURATION_SIZE:
@@ -257,81 +254,46 @@ def recognition_worker():
 
 
 
-# ================== 翻译工作线程 ==================
-# from translate import translate_text
-# def translation_worker():
-#     """从队列取出 TranResult 对象，调用翻译 API 并更新 translation 字段"""
-#     while True:
-#         try:
-#             item: TranResult = translation_queue.get(timeout=1.0)
-#         except queue.Empty:
-#             continue
-        
-#         # [计时器] 开始计时
-#         timer_start_time = time.perf_counter()
-
-#         try:
-#             translated = translate_text(item.original, "127.0.0.1:52208")
-#             item.translation = translated
-#             if translated:
-#                 # 你可以在这里打印或通过其他方式输出译文
-#                 print(f" - - - - - - ")
-#                 print(f"[原文] {item.original}")
-#                 print(f"[译文] {translated}")
-#                 print(f" - - - - - - ")
-#             else:
-#                 # 可打印警告
-#                 print(f"[翻译失败]异常: {item.original}")
-#         except Exception as e:
-#             print(f"[翻译线程] 异常: {e}", file=sys.stderr)
-#         finally:
-#             translation_queue.task_done()
-        
-#         # [计时器] 结束计时
-#         timer_end_time = time.perf_counter()
-#         timer_process_time = timer_end_time - timer_start_time
-#         print(f"[性能] 翻译耗时: {timer_process_time:.3f}s | {'✅ 实时' if timer_process_time < TIME_INFERENCE_INTERVAL else '❌ 超时'}")
-
-
-
-
 # ================== 结果汇总处理工作线程 ==================
 from WebTranslate import TranslationService
+from WebBroadcast import WebBroadcast
 
 
 def collection_worker():
     """从队列取出 TranResult 对象，用于广播与调用翻译"""
 
+    # 广播服务
+    webBroadcast = WebBroadcast(port=52218, max_queue_size=20, max_clients=10)
+    webBroadcast.start()
+
     # 翻译服务
     translationService = TranslationService(server="127.0.0.1:52208")
-    def translationCallback(is_ok: bool, result: str):
+    def translationCallback(is_ok: bool, result: str, tranResult: TranResult):
         if is_ok:
-            print(f"✅ {result}")
+            tranResult.translation = result
+            webBroadcast.send(tranResult)
 
-
+    # 循环处理
     while True:
         try:
-            tranResult: TranResult = result_queue.get(timeout=1.0)
+            tranResult: TranResult = result_queue.get(timeout=5.0)
         except queue.Empty:
             continue
         
         # print("collection_worker_queue_itme",tranResult)
         
         # 广播环节
-        
+        webBroadcast.send(tranResult)
         
         # 翻译环节
         if tranResult.final: # 能效不高时只对完整句子进行翻译
-            tranResult.original
             translationService.translate(
                 text=tranResult.original,
                 to_lang="中文",
-                callback=translationCallback
+                callback=lambda is_ok, result: translationCallback(is_ok, result, tranResult)
             )
 
         
-
-
 
 
 
@@ -341,9 +303,6 @@ udp_thread.start()
 
 recog_thread = threading.Thread(target=recognition_worker, daemon=True)
 recog_thread.start()
-
-# trans_thread = threading.Thread(target=translation_worker, daemon=True)
-# trans_thread.start()
 
 collection_thread = threading.Thread(target=collection_worker, daemon=True)
 collection_thread.start()

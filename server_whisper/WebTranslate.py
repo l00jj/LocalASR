@@ -11,7 +11,7 @@ def translate_text(source_text: str, to_lang: str, server: str) -> Tuple[bool, s
     调用翻译 API，返回翻译结果（字符串）。
     （逻辑直接来自原 translate.py 的 translate_text 函数）
     """
-    print("_translate_text", source_text, to_lang, server)
+    # print("_translate_text", source_text, to_lang, server)
     prompt = f"将以下文本翻译为{to_lang}，注意只需要输出翻译后的结果，不要额外解释：\n{source_text}"
     payload = {
         "messages": [{"role": "user", "content": prompt}],
@@ -74,11 +74,6 @@ class TranslationService:
                 callback(is_ok, result)
 
         # 异步提交任务到进程池
-        # self.pool.apply_async(
-        #     self._translate_text,
-        #     args=(text, to_lang, self.server),
-        #     callback=done_callback
-        # )
         self.pool.apply_async(
             translate_text,
             args=(text, to_lang, self.server),
@@ -105,7 +100,7 @@ if __name__ == "__main__":
         print(f"✅ 翻译结果: {translated}")
 
     # 创建服务实例（进程池大小 2）
-    service = TranslationService(server="127.0.0.1:52208", max_workers=2)
+    service = TranslationService(server="127.0.0.1:52208")
 
     # 提交多个翻译任务（非阻塞）
     service.translate("Hello, how are you?", callback=print_result)

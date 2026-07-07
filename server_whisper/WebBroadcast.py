@@ -3,9 +3,12 @@ import json
 import threading
 import logging
 from typing import List, Set, Optional
+import copy
 from dataclasses import dataclass, asdict
 
 # 你的数据类（可替换）
+
+
 @dataclass
 class TranResult:
     start: int
@@ -14,7 +17,9 @@ class TranResult:
     translation: str
     final: bool
 
+
 logger = logging.getLogger(__name__)
+
 
 class WebBroadcast:
     """
@@ -25,7 +30,7 @@ class WebBroadcast:
     :param max_clients: 允许的最大客户端连接数，超出时新连接将被拒绝
     """
 
-    def __init__(self, port: int = 8765, max_queue_size: int = 100, max_clients: int = 100):
+    def __init__(self, port: int = 8765, max_queue_size: int = 20, max_clients: int = 10):
         self.port = port
         self.max_queue_size = max_queue_size
         self.max_clients = max_clients
@@ -66,6 +71,7 @@ class WebBroadcast:
             self._thread.join(timeout=2)
         logger.info("广播服务已停止")
 
+    # 整合列表功能未完善
     def send(self, results: List[TranResult]) -> None:
         """
         发送一条或多条字幕消息（批量推送）。
@@ -77,12 +83,11 @@ class WebBroadcast:
         if not isinstance(results, list):
             results = list(results)  # 兼容传入单个对象
 
-        for result in results:
-            # 将每个对象异步放入队列（线程安全）
-            asyncio.run_coroutine_threadsafe(
-                self._put_to_queue(result),
-                self.loop
-            )
+        # 将对象异步放入队列（线程安全）
+        asyncio.run_coroutine_threadsafe(
+            self._put_to_queue(copy.deepcopy(results)),
+            self.loop
+        )
 
     # ---------- 内部异步逻辑 ----------
     def _run_loop(self) -> None:
@@ -103,7 +108,8 @@ class WebBroadcast:
             ping_interval=30,
             ping_timeout=10
         )
-        logger.info(f"WebSocket 广播服务已启动，端口 {self.port}，最大队列 {self.max_queue_size}，最大客户端 {self.max_clients}")
+        logger.info(
+            f"WebSocket 广播服务已启动，端口 {self.port}，最大队列 {self.max_queue_size}，最大客户端 {self.max_clients}")
 
     async def _handle_client(self, websocket, path):
         """处理新客户端连接。"""
@@ -126,10 +132,10 @@ class WebBroadcast:
         """后台消费者：从队列取消息并广播。"""
         while self._running:
             try:
-                result = await self.send_queue.get()
+                results = await self.send_queue.get()
                 # 序列化为 JSON
                 try:
-                    message = json.dumps(asdict(result), ensure_ascii=False)
+                    message = json.dumps(asdict(results), ensure_ascii=False)
                 except Exception as e:
                     logger.error(f"序列化失败: {e}")
                     continue
@@ -140,7 +146,8 @@ class WebBroadcast:
                 # 并发广播给所有在线客户端
                 current_clients = list(self.clients)
                 await asyncio.gather(
-                    *[self._send_to_client(c, message) for c in current_clients],
+                    *[self._send_to_client(c, message)
+                      for c in current_clients],
                     return_exceptions=True
                 )
             except asyncio.CancelledError:
@@ -155,9 +162,9 @@ class WebBroadcast:
         except (websockets.ConnectionClosed, websockets.WebSocketException):
             self.clients.discard(client)
 
-    async def _put_to_queue(self, result):
-        """将单个结果放入队列（队列满时丢弃）。"""
+    async def _put_to_queue(self, results):
+        """将结果放入队列（队列满时丢弃）。"""
         try:
-            self.send_queue.put_nowait(result)
+            self.send_queue.put_nowait(results)
         except asyncio.QueueFull:
             logger.warning("发送队列已满，丢弃一条消息")
