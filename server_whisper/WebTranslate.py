@@ -24,6 +24,7 @@ class TranslationService:
         调用翻译 API，返回翻译结果（字符串）。
         （逻辑直接来自原 translate.py 的 translate_text 函数）
         """
+        print("_translate_text", source_text, to_lang, server)
         prompt = f"将以下文本翻译为{to_lang}，注意只需要输出翻译后的结果，不要额外解释：\n{source_text}"
         payload = {
             "messages": [{"role": "user", "content": prompt}],
