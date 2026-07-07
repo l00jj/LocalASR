@@ -40,7 +40,7 @@ def audio_callback(indata, frames, pa_time, status):
         print(f"音频状态: {status}", flush=True)
 
     # 发送端：获取纳秒秒时间戳并转为毫秒 8 字节大端序
-    time_header = int(time.time_ns() // 1000).to_bytes(8, 'big')    # 8 字节
+    time_header = int(time.time_ns() // 1_000_000).to_bytes(8, 'big')    # 8 字节
 
     # 将音频数据转为 bytes 并发送
     # indata 是 int16 类型，直接 tobytes() 即可

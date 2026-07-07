@@ -152,7 +152,7 @@ def udp_receiver():
         # 追加至缓冲区
         with buffer_lock:
             duration_ms = int(len(audio_buffer) * 1000 // TARGET_SAMPLE_RATE)
-            print(timestamp_ms, duration_ms)
+            # print(timestamp_ms, duration_ms) # 测试验证用
             audio_timestamp_ms = timestamp_ms - duration_ms
             audio_buffer = np.concatenate([audio_buffer, target_rate_mono])
             # 检测是否有声音
