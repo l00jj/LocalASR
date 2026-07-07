@@ -45,7 +45,7 @@
             width: 14px;
             height: 14px;
             border-radius: 50%;
-            transition: background 0.3s, box-shadow 0.3s;
+            transition: background 0.2s;
         }
         .status-dot.online {
             background: #52c41a;
@@ -59,7 +59,6 @@
         }
         .status-dot.inactive {
             background: #d9d9d9;
-            box-shadow: none;
         }
         .info-badge {
             background: #e6f7ff;
@@ -79,7 +78,6 @@
         @media (max-width: 768px) {
             .main-content {
                 grid-template-columns: 1fr;
-                grid-template-rows: 3fr 1fr;
                 gap: 12px;
             }
         }
@@ -91,7 +89,6 @@
             display: flex;
             flex-direction: column;
             min-height: 0;
-            overflow: hidden;
         }
         .panel h2 {
             display: none;
@@ -186,7 +183,7 @@
                 <span>{{ isActive ? '有信息' : '无信息' }}</span>
             </div>
             <div class="status-item">
-                <span>消息数</span>
+                <span>接收消息数</span>
                 <span class="info-badge">{{ messages.length }}</span>
             </div>
         </div>
@@ -210,7 +207,7 @@
                 </div>
             </div>
 
-            <!-- 面板2：final = false 最近 N 条（桌面3条 / 移动2条） -->
+            <!-- 面板2：final = false 最近3条 -->
             <div class="panel">
                 <div class="msg-list" ref="interimListRef" @scroll="onInterimScroll">
                     <div v-if="finalFalseRecent.length === 0" class="empty-hint">暂无临时字幕</div>
@@ -231,8 +228,7 @@
     </div>
 
     <!-- Vue & WebSocket -->
-    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js">
-    </script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <script type="importmap">
         {
             "imports": {
@@ -242,33 +238,17 @@
     </script>
 
     <script type="module">
-        import {
-            ReconnectingWebSocket
-        } from '@nktkas/rews';
-        const {
-            createApp,
-            ref,
-            computed,
-            onMounted,
-            onBeforeUnmount,
-            watch,
-            nextTick
-        } = Vue;
+        import { ReconnectingWebSocket } from '@nktkas/rews';
+        const { createApp, ref, computed, onMounted, onBeforeUnmount, watch, nextTick } = Vue;
 
         const app = createApp({
             setup() {
                 const connectionStatus = ref(false);
-                const isActive = ref(false); // ★ 改为 ref，手动控制亮灭
-                const messages = ref([]);
-                const messageMap = new Map();
+                const lastMsgTime = ref(0);
+                const messages = ref([]);           // 所有消息的列表（响应式）
+                const messageMap = new Map();       // start → 消息对象，用于快速更新
                 let msgIdCounter = 0;
                 let inactivityTimer = null;
-
-                // 移动端检测
-                const isMobile = ref(window.innerWidth < 768);
-                const handleResize = () => {
-                    isMobile.value = window.innerWidth < 768;
-                };
 
                 // 两个列表的 DOM 引用
                 const finalListRef = ref(null);
@@ -293,16 +273,16 @@
                         el.scrollTop + el.clientHeight >= el.scrollHeight - SCROLL_THRESHOLD;
                 }
 
+                const isActive = computed(() => Date.now() - lastMsgTime.value < 2000);
+
                 const finalTrueMessages = computed(() =>
                     messages.value.filter(item => item.final === true)
                 );
 
-                // ★ 移动端显示2条，桌面端显示3条
                 const finalFalseRecent = computed(() => {
-                    const limit = isMobile.value ? 2 : 3;
                     const filtered = messages.value.filter(item => item.final === false);
                     const sorted = [...filtered].sort((a, b) => b.id - a.id);
-                    const recent = sorted.slice(0, limit);
+                    const recent = sorted.slice(0, 3);
                     return recent.reverse();
                 });
 
@@ -333,20 +313,16 @@
                     try {
                         const data = JSON.parse(event.data);
                         const items = Array.isArray(data) ? data : [data];
-
-                        // ★ 点亮活动灯，并重置2秒定时器
-                        isActive.value = true;
+                        lastMsgTime.value = Date.now();
                         if (inactivityTimer) clearTimeout(inactivityTimer);
-                        inactivityTimer = setTimeout(() => {
-                            isActive.value = false;
-                        }, 2000);
+                        inactivityTimer = setTimeout(() => {}, 2000);
 
                         items.forEach(item => {
-                            const key = item.start;
+                            const key = item.start;   // 以 start 毫秒时间戳作为唯一标识
                             if (messageMap.has(key)) {
-                                // 已存在 → 原地更新属性
+                                // 已存在 → 原地更新属性（翻译、final状态等）
                                 const existing = messageMap.get(key);
-                                Object.assign(existing, item, { id: existing.id });
+                                Object.assign(existing, item, { id: existing.id }); // 保留原 id
                             } else {
                                 // 新句子 → 创建并加入列表
                                 msgIdCounter++;
@@ -362,7 +338,6 @@
 
                 // WebSocket 连接
                 let ws = null;
-
                 function initWebSocket() {
                     if (ws) ws.close();
                     const hostname = window.location.hostname;
@@ -381,12 +356,10 @@
                 }
 
                 onMounted(() => {
-                    window.addEventListener('resize', handleResize);
                     initWebSocket();
                 });
 
                 onBeforeUnmount(() => {
-                    window.removeEventListener('resize', handleResize);
                     if (ws) ws.close();
                     if (inactivityTimer) clearTimeout(inactivityTimer);
                 });
