@@ -264,6 +264,8 @@ from WebBroadcast import WebBroadcast
 ############## 整合列表后发送功能未完善，目前都是单条数列发送
 def resultformat(tranResult: TranResult):
     data_dict = asdict(tranResult)
+    print(data_dict)
+    print(data_dict["original"])
     return [data_dict]
 
 
