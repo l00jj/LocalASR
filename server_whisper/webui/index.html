@@ -5,27 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>字幕广播接收器</title>
     <style>
-        /* 全局重置，强制无滚动 */
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        html, body {
-            height: 100%;
-            overflow: hidden;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f0f2f5;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; }
         .app {
             height: 100vh;
             display: flex;
             flex-direction: column;
             padding: 16px 20px;
-            box-sizing: border-box;
             gap: 12px;
         }
-        /* 状态栏 */
         .status-panel {
             flex-shrink: 0;
             background: #fff;
@@ -44,7 +32,6 @@
             font-size: 15px;
         }
         .status-dot {
-            display: inline-block;
             width: 14px;
             height: 14px;
             border-radius: 50%;
@@ -62,19 +49,15 @@
             border-radius: 12px;
             font-size: 14px;
         }
-        /* 主内容：两列，均分剩余高度 */
         .main-content {
             flex: 1;
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 16px;
-            min-height: 0;   /* 防止溢出 */
+            min-height: 0;
         }
         @media (max-width: 768px) {
-            .main-content {
-                grid-template-columns: 1fr;
-                gap: 12px;
-            }
+            .main-content { grid-template-columns: 1fr; gap: 12px; }
         }
         .panel {
             background: #fff;
@@ -85,11 +68,7 @@
             flex-direction: column;
             min-height: 0;
         }
-        /* 隐藏标题（保留以备将来） */
-        .panel h2 {
-            display: none;
-        }
-        /* 消息列表容器：撑满剩余高度，内部滚动 */
+        .panel h2 { display: none; }
         .msg-list {
             flex: 1;
             overflow-y: auto;
@@ -102,26 +81,11 @@
             font-size: 14px;
             line-height: 1.5;
         }
-        .msg-item:last-child {
-            border-bottom: none;
-        }
-        .msg-item .original {
-            font-weight: 500;
-            color: #333;
-        }
-        .msg-item .translation {
-            color: #1890ff;
-            margin-top: 2px;
-        }
-        .msg-item .translation.empty {
-            color: #bbb;
-            font-style: italic;
-        }
-        .msg-item .meta {
-            font-size: 12px;
-            color: #999;
-            margin-bottom: 2px;
-        }
+        .msg-item:last-child { border-bottom: none; }
+        .msg-item .original { font-weight: 500; color: #333; }
+        .msg-item .translation { color: #1890ff; margin-top: 2px; }
+        .msg-item .translation.empty { color: #bbb; font-style: italic; }
+        .msg-item .meta { font-size: 12px; color: #999; margin-bottom: 2px; }
         .msg-item .meta .final-tag {
             display: inline-block;
             background: #52c41a;
@@ -140,37 +104,17 @@
             font-size: 11px;
             margin-left: 6px;
         }
-        .empty-hint {
-            color: #bbb;
-            text-align: center;
-            padding: 20px 0;
-            font-size: 14px;
-        }
-        /* 给面板添加简单装饰，便于区分（可选） */
-        .panel:first-child {
-            border-left: 4px solid #52c41a;
-        }
-        .panel:last-child {
-            border-left: 4px solid #faad14;
-        }
-        /* 美化滚动条 */
-        .msg-list::-webkit-scrollbar {
-            width: 5px;
-        }
-        .msg-list::-webkit-scrollbar-track {
-            background: #f0f0f0;
-            border-radius: 4px;
-        }
-        .msg-list::-webkit-scrollbar-thumb {
-            background: #ccc;
-            border-radius: 4px;
-        }
+        .empty-hint { color: #bbb; text-align: center; padding: 20px 0; font-size: 14px; }
+        .panel:first-child { border-left: 4px solid #52c41a; }
+        .panel:last-child { border-left: 4px solid #faad14; }
+        .msg-list::-webkit-scrollbar { width: 5px; }
+        .msg-list::-webkit-scrollbar-track { background: #f0f0f0; border-radius: 4px; }
+        .msg-list::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
     </style>
 </head>
 <body>
 
 <div id="app" class="app">
-    <!-- 基本信息面板 -->
     <div class="status-panel">
         <div class="status-item">
             <span>服务器状态</span>
@@ -188,9 +132,8 @@
         </div>
     </div>
 
-    <!-- 主内容 -->
     <div class="main-content">
-        <!-- 面板1：final = true 的消息（旧→新） -->
+        <!-- 面板1：final = true -->
         <div class="panel">
             <div class="msg-list" ref="finalListRef">
                 <div v-if="finalTrueMessages.length === 0" class="empty-hint">暂无最终字幕</div>
@@ -228,7 +171,7 @@
     </div>
 </div>
 
-<!-- 引入 Vue 3 -->
+<!-- Vue & WebSocket -->
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script type="importmap">
 {
@@ -249,16 +192,10 @@
             const messages = ref([]);
             let msgIdCounter = 0;
             let inactivityTimer = null;
-
-            // 最终字幕列表的 DOM 引用（用于自动滚动）
             const finalListRef = ref(null);
 
             const isActive = computed(() => Date.now() - lastMsgTime.value < 2000);
-
-            const finalTrueMessages = computed(() => {
-                return messages.value.filter(item => item.final === true);
-            });
-
+            const finalTrueMessages = computed(() => messages.value.filter(item => item.final === true));
             const finalFalseRecent = computed(() => {
                 const filtered = messages.value.filter(item => item.final === false);
                 const sorted = [...filtered].sort((a, b) => b.id - a.id);
@@ -266,67 +203,46 @@
                 return recent.reverse();
             });
 
-            // 当最终字幕列表变化时，滚动到底部
+            // 智能跟随：只当滚动条在底部附近时才自动滚到底部
             watch(finalTrueMessages, () => {
                 nextTick(() => {
-                    if (finalListRef.value) {
-                        finalListRef.value.scrollTop = finalListRef.value.scrollHeight;
+                    const el = finalListRef.value;
+                    if (!el) return;
+                    const threshold = 30;  // 底部阈值（像素）
+                    const isNearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - threshold;
+                    if (isNearBottom) {
+                        el.scrollTop = el.scrollHeight;
                     }
                 });
-            }, { deep: false, immediate: true }); // immediate: true 保证初始加载也滚动
+            }, { deep: false, immediate: true });
 
-            // WebSocket 处理
+            // WebSocket
             let ws = null;
-
             function handleMessage(event) {
                 try {
                     const data = JSON.parse(event.data);
                     const items = Array.isArray(data) ? data : [data];
                     lastMsgTime.value = Date.now();
-
-                    if (inactivityTimer) {
-                        clearTimeout(inactivityTimer);
-                        inactivityTimer = null;
-                    }
+                    if (inactivityTimer) clearTimeout(inactivityTimer);
                     inactivityTimer = setTimeout(() => {}, 2000);
-
                     items.forEach(item => {
                         msgIdCounter++;
-                        messages.value.push({
-                            id: msgIdCounter,
-                            ...item
-                        });
+                        messages.value.push({ id: msgIdCounter, ...item });
                     });
-                } catch (e) {
-                    console.warn('消息解析失败:', e);
-                }
+                } catch (e) { console.warn('消息解析失败:', e); }
             }
-
             function initWebSocket() {
                 if (ws) ws.close();
                 const hostname = window.location.hostname;
                 const wsUrl = `ws://${hostname}:52218`;
                 ws = new ReconnectingWebSocket(wsUrl, [], { retryDelay: 2000 });
-
-                ws.addEventListener('open', () => {
-                    connectionStatus.value = true;
-                });
-
+                ws.addEventListener('open', () => { connectionStatus.value = true; });
                 ws.addEventListener('message', handleMessage);
-
-                ws.addEventListener('close', (event) => {
-                    connectionStatus.value = false;
-                });
-
-                ws.addEventListener('error', (error) => {
-                    console.error('WebSocket 错误:', error);
-                });
+                ws.addEventListener('close', () => { connectionStatus.value = false; });
+                ws.addEventListener('error', (e) => { console.error('WebSocket 错误:', e); });
             }
 
-            onMounted(() => {
-                initWebSocket();
-            });
-
+            onMounted(() => { initWebSocket(); });
             onBeforeUnmount(() => {
                 if (ws) ws.close();
                 if (inactivityTimer) clearTimeout(inactivityTimer);
@@ -345,6 +261,5 @@
 
     app.mount('#app');
 </script>
-
 </body>
 </html>

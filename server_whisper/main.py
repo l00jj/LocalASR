@@ -1,3 +1,4 @@
+from WebHtmlServer import WebHtmlServer
 from WebBroadcast import WebBroadcast
 from WebTranslate import TranslationService
 import os
@@ -318,6 +319,11 @@ recog_thread.start()
 
 collection_thread = threading.Thread(target=collection_worker, daemon=True)
 collection_thread.start()
+
+# 启动 Web 服务器（在独立线程中运行）
+web_server = WebHtmlServer(port=52280, web_dir='webui')
+server_thread = threading.Thread(target=web_server.start, daemon=True)
+server_thread.start()
 
 print("实时语音识别已启动（从 UDP 接收音频流），按 Ctrl+C 停止...")
 try:
