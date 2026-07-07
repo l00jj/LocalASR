@@ -135,7 +135,9 @@ class WebBroadcast:
                 results = await self.send_queue.get()
                 # 序列化为 JSON
                 try:
-                    message = json.dumps(asdict(results), ensure_ascii=False)
+                    # message = json.dumps(asdict(results), ensure_ascii=False)
+                    data = [asdict(item) for item in results]
+                    message = json.dumps(data, ensure_ascii=False)
                 except Exception as e:
                     logger.error(f"序列化失败: {e}")
                     continue
