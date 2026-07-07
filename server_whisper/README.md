@@ -36,8 +36,9 @@ sudo apt update
 sudo apt install -y libasound2-dev
 
 pip install faster-whisper -i https://pypi.tuna.tsinghua.edu.cn/simple
-pip install websockets -i https://pypi.tuna.tsinghua.edu.cn/simple
-pip install pyalsaaudio modelscope soundfile librosa requests -i https://pypi.tuna.tsinghua.edu.cn/simple
+pip install requests websockets -i https://pypi.tuna.tsinghua.edu.cn/simple
+pip install pyalsaaudio modelscope soundfile librosa  -i https://pypi.tuna.tsinghua.edu.cn/simple
+pip install netifaces -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
 ### 部署 llama.cpp

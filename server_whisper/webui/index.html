@@ -1,28 +1,30 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html>
 <head>
     <meta charset="UTF-8">
-    <title>WebSocket 广播客户端</title>
+    <title>WebSocket 自动重连测试</title>
 </head>
 <body>
-    <h1>WebSocket 广播测试</h1>
-    <p>打开控制台 (F12) 查看收到的消息</p>
-    <script>
-        // 连接地址（与你的 WebBroadcast 端口一致）
+    <h1>WebSocket 自动重连测试</h1>
+    <p>打开控制台 (F12) 查看日志</p>
+
+    <script type="module">
+        // 通过 esm.sh CDN 导入 ReconnectingWebSocket
+        import { ReconnectingWebSocket } from 'https://esm.sh/@nktkas/rews';
+
         const WS_URL = 'ws://192.168.0.118:52218';
 
-        // 创建 WebSocket 连接
-        const ws = new WebSocket(WS_URL);
+        const ws = new ReconnectingWebSocket(WS_URL, [], {
+            retryDelay: 2000,   // 重连间隔 2 秒（固定间隔）
+            // maxRetries: 10,   // 最大重试次数（可选）
+        });
 
-        // 连接打开时
         ws.addEventListener('open', () => {
             console.log('✅ 已连接到广播服务');
         });
 
-        // 接收到消息时
         ws.addEventListener('message', (event) => {
             console.log('📨 收到广播:', event.data);
-            // 如果数据是 JSON，可以进一步解析
             try {
                 const parsed = JSON.parse(event.data);
                 console.log('  解析后:', parsed);
@@ -31,17 +33,16 @@
             }
         });
 
-        // 连接关闭时
         ws.addEventListener('close', (event) => {
             console.warn(`⚠️ 连接已关闭 (代码: ${event.code}, 原因: ${event.reason})`);
+            // 注意：ReconnectingWebSocket 会自动重连，不需要手动处理
         });
 
-        // 连接错误时
         ws.addEventListener('error', (error) => {
             console.error('❌ 连接错误:', error);
         });
 
-        // 可选：页面关闭时主动关闭连接
+        // 页面关闭时主动关闭连接
         window.addEventListener('beforeunload', () => {
             if (ws.readyState === WebSocket.OPEN) {
                 ws.close();
