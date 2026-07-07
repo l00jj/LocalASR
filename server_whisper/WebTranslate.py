@@ -3,15 +3,50 @@ import requests
 import multiprocessing
 from typing import Optional, Callable, Tuple
 
-def translate_text_test(source_text: str, to_lang: str, server: str) -> str:
-    print("✅",source_text,to_lang)
-    return (False, "123")
+# ---------- 翻译函数（在子进程中执行） ----------
+
+
+def translate_text(source_text: str, to_lang: str, server: str) -> Tuple[bool, str]:
+    """
+    调用翻译 API，返回翻译结果（字符串）。
+    （逻辑直接来自原 translate.py 的 translate_text 函数）
+    """
+    print("_translate_text", source_text, to_lang, server)
+    prompt = f"将以下文本翻译为{to_lang}，注意只需要输出翻译后的结果，不要额外解释：\n{source_text}"
+    payload = {
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.7,
+        "max_tokens": 256,
+        "top_p": 0.6,
+        "top_k": 20,
+        "repetition_penalty": 1.05,
+    }
+
+    # 规范化服务器地址
+    if not server.startswith(("http://", "https://")):
+        server = f"http://{server}"
+    api_url = f"{server}/v1/chat/completions"
+
+    try:
+        resp = requests.post(api_url, json=payload, timeout=10)
+        if resp.status_code == 200:
+            result = resp.json()
+            tran_test = result["choices"][0]["message"]["content"].strip()
+            return (True, tran_test)
+        else:
+            print(f"[翻译环节] 服务器状态: {resp.text}", file=sys.stderr)
+            return (False, resp.text)
+    except Exception as e:
+        print(f"[翻译环节] 请求失败: {e}", file=sys.stderr)
+        return (False, e)
 
 # ================== 翻译服务类 ==================
+
+
 class TranslationService:
     """
     异步翻译服务，使用进程池隔离翻译任务，避免 GIL 影响。
-    
+
     :param server: 翻译 API 服务器地址（例如 "127.0.0.1:52208"）
     :param pool_processes: 并发翻译的进程数
     :param max_size: 最大翻译队列上限
@@ -22,43 +57,8 @@ class TranslationService:
         # 这里的 processes 是指处理并发量非队列上限，multiprocessing 自身没有控制队列上限
         self.pool = multiprocessing.Pool(processes=pool_processes)
 
-    # ---------- 内部翻译函数（在子进程中执行） ----------
-    def _translate_text(self, source_text: str, to_lang: str, server: str) -> str:
-        """
-        调用翻译 API，返回翻译结果（字符串）。
-        （逻辑直接来自原 translate.py 的 translate_text 函数）
-        """
-        print("_translate_text", source_text, to_lang, server)
-        prompt = f"将以下文本翻译为{to_lang}，注意只需要输出翻译后的结果，不要额外解释：\n{source_text}"
-        payload = {
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.7,
-            "max_tokens": 256,
-            "top_p": 0.6,
-            "top_k": 20,
-            "repetition_penalty": 1.05,
-        }
-
-        # 规范化服务器地址
-        if not server.startswith(("http://", "https://")):
-            server = f"http://{server}"
-        api_url = f"{server}/v1/chat/completions"
-
-        try:
-            resp = requests.post(api_url, json=payload, timeout=10)
-            if resp.status_code == 200:
-                result = resp.json()
-                tran_test = result["choices"][0]["message"]["content"].strip()
-                return (True, tran_test)
-            else:
-                print(f"[翻译环节] 服务器状态: {resp.text}", file=sys.stderr)
-                return (False, resp.text)
-        except Exception as e:
-            print(f"[翻译环节] 请求失败: {e}", file=sys.stderr)
-            return (False, e)
-
     # ---------- 对外接口 ----------
-    def translate(self, text: str, to_lang: str = "中文", callback: Optional[Callable[[bool,str], None]] = None) -> None:
+    def translate(self, text: str, to_lang: str = "中文", callback: Optional[Callable[[bool, str], None]] = None) -> None:
         """
         提交一个翻译任务（非阻塞）。
 
@@ -80,11 +80,10 @@ class TranslationService:
         #     callback=done_callback
         # )
         self.pool.apply_async(
-            translate_text_test,
+            translate_text,
             args=(text, to_lang, self.server),
             callback=done_callback
         )
-        
 
     def close(self) -> None:
         """关闭进程池，等待所有任务完成（优雅退出）。"""
