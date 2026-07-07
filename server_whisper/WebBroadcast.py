@@ -4,18 +4,18 @@ import threading
 import logging
 from typing import List, Set, Optional
 import copy
-from dataclasses import dataclass, asdict
+# from dataclasses import dataclass, asdict
 import websockets
 
 
-# 你的数据类（可替换）
-@dataclass
-class TranResult:
-    start: int
-    duration: float
-    original: str
-    translation: str
-    final: bool
+# # 你的数据类（可替换）
+# @dataclass
+# class TranResult:
+#     start: int
+#     duration: float
+#     original: str
+#     translation: str
+#     final: bool
 
 
 logger = logging.getLogger(__name__)
@@ -71,8 +71,8 @@ class WebBroadcast:
             self._thread.join(timeout=2)
         logger.info("广播服务已停止")
 
-    # 整合列表功能未完善
-    def send(self, result: TranResult) -> None:
+
+    def send(self, result: List[dict]) -> None:
         """
         发送一条或多条字幕消息（批量推送）。
 
@@ -83,11 +83,11 @@ class WebBroadcast:
         # if not isinstance(results, list):
         #     results = [results]  # 兼容传入单个对象
 
-        data_dict = asdict(copy.deepcopy(result))
+        # data_dict = asdict(result)
 
         # 将对象异步放入队列（线程安全）
         asyncio.run_coroutine_threadsafe(
-            self._put_to_queue(copy.deepcopy([data_dict])),
+            self._put_to_queue(result),
             self.loop
         )
 

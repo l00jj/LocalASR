@@ -7,6 +7,7 @@ import time
 import socket
 import queue
 from collections import deque
+from dataclasses import dataclass, asdict
 from faster_whisper import WhisperModel
 import soundfile as sf
 
@@ -84,6 +85,7 @@ result_queue = queue.Queue(maxsize=50)
 
 
 # ================== 结果 Class ==================
+@dataclass
 class TranResult:
     """
     存储单段语音识别结果，包含时间信息、原文及译文。
@@ -259,6 +261,12 @@ from WebTranslate import TranslationService
 from WebBroadcast import WebBroadcast
 
 
+############## 整合列表后发送功能未完善，目前都是单条数列发送
+def resultformat(tranResult: TranResult):
+    data_dict = asdict(tranResult)
+    return data_dict
+
+
 def collection_worker():
     """从队列取出 TranResult 对象，用于广播与调用翻译"""
 
@@ -271,7 +279,7 @@ def collection_worker():
     def translationCallback(is_ok: bool, result: str, tranResult: TranResult):
         if is_ok:
             tranResult.translation = result
-            webBroadcast.send(tranResult)
+            webBroadcast.send(resultformat(tranResult))
 
     # 循环处理
     while True:
@@ -283,7 +291,7 @@ def collection_worker():
         # print("collection_worker_queue_itme",tranResult)
         
         # 广播环节
-        webBroadcast.send(tranResult)
+        webBroadcast.send(resultformat(tranResult))
         
         # 翻译环节
         if tranResult.final: # 能效不高时只对完整句子进行翻译
