@@ -102,7 +102,7 @@ class WebBroadcast:
         logger.info(
             f"WebSocket 广播服务已启动，端口 {self.port}，最大队列 {self.max_queue_size}，最大客户端 {self.max_clients}")
 
-    async def _handle_client(self, websocket, path):
+    async def _handle_client(self, websocket):
         """处理新客户端连接。"""
         if len(self.clients) >= self.max_clients:
             await websocket.close(code=1008, reason="Too many clients")
