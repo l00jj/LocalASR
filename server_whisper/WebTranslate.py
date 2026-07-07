@@ -9,7 +9,8 @@ class TranslationService:
     异步翻译服务，使用进程池隔离翻译任务，避免 GIL 影响。
     
     :param server: 翻译 API 服务器地址（例如 "127.0.0.1:52208"）
-    :param max_workers: 并发翻译的进程数
+    :param pool_processes: 并发翻译的进程数
+    :param max_size: 最大翻译队列上限
     """
 
     def __init__(self, server: str = "127.0.0.1:52208", pool_processes: int = 3, max_size: int = 20):

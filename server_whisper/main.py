@@ -303,7 +303,7 @@ def collection_worker():
     """从队列取出 TranResult 对象，用于广播与调用翻译"""
 
     # 翻译服务
-    translationService = TranslationService(server="127.0.0.1:52208", max_workers=10)
+    translationService = TranslationService(server="127.0.0.1:52208")
     def translationCallback(is_ok: bool, result: str):
         if is_ok:
             print(f"✅ {result}")
