@@ -5,8 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>字幕广播接收器</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: #f0f2f5;
+        }
         .app {
             height: 100vh;
             display: flex;
@@ -19,7 +29,7 @@
             background: #fff;
             border-radius: 8px;
             padding: 12px 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             display: flex;
             align-items: center;
             gap: 30px;
@@ -37,10 +47,19 @@
             border-radius: 50%;
             transition: background 0.2s;
         }
-        .status-dot.online { background: #52c41a; }
-        .status-dot.offline { background: #ff4d4f; }
-        .status-dot.active { background: #52c41a; box-shadow: 0 0 8px #52c41a; }
-        .status-dot.inactive { background: #d9d9d9; }
+        .status-dot.online {
+            background: #52c41a;
+        }
+        .status-dot.offline {
+            background: #ff4d4f;
+        }
+        .status-dot.active {
+            background: #52c41a;
+            box-shadow: 0 0 8px #52c41a;
+        }
+        .status-dot.inactive {
+            background: #d9d9d9;
+        }
         .info-badge {
             background: #e6f7ff;
             border: 1px solid #91d5ff;
@@ -57,18 +76,23 @@
             min-height: 0;
         }
         @media (max-width: 768px) {
-            .main-content { grid-template-columns: 1fr; gap: 12px; }
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
         }
         .panel {
             background: #fff;
             border-radius: 8px;
             padding: 12px 16px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             display: flex;
             flex-direction: column;
             min-height: 0;
         }
-        .panel h2 { display: none; }
+        .panel h2 {
+            display: none;
+        }
         .msg-list {
             flex: 1;
             overflow-y: auto;
@@ -81,11 +105,26 @@
             font-size: 14px;
             line-height: 1.5;
         }
-        .msg-item:last-child { border-bottom: none; }
-        .msg-item .original { font-weight: 500; color: #333; }
-        .msg-item .translation { color: #1890ff; margin-top: 2px; }
-        .msg-item .translation.empty { color: #bbb; font-style: italic; }
-        .msg-item .meta { font-size: 12px; color: #999; margin-bottom: 2px; }
+        .msg-item:last-child {
+            border-bottom: none;
+        }
+        .msg-item .original {
+            font-weight: 500;
+            color: #333;
+        }
+        .msg-item .translation {
+            color: #1890ff;
+            margin-top: 2px;
+        }
+        .msg-item .translation.empty {
+            color: #bbb;
+            font-style: italic;
+        }
+        .msg-item .meta {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 2px;
+        }
         .msg-item .meta .final-tag {
             display: inline-block;
             background: #52c41a;
@@ -104,162 +143,253 @@
             font-size: 11px;
             margin-left: 6px;
         }
-        .empty-hint { color: #bbb; text-align: center; padding: 20px 0; font-size: 14px; }
-        .panel:first-child { border-left: 4px solid #52c41a; }
-        .panel:last-child { border-left: 4px solid #faad14; }
-        .msg-list::-webkit-scrollbar { width: 5px; }
-        .msg-list::-webkit-scrollbar-track { background: #f0f0f0; border-radius: 4px; }
-        .msg-list::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+        .empty-hint {
+            color: #bbb;
+            text-align: center;
+            padding: 20px 0;
+            font-size: 14px;
+        }
+        .panel:first-child {
+            border-left: 4px solid #52c41a;
+        }
+        .panel:last-child {
+            border-left: 4px solid #faad14;
+        }
+        .msg-list::-webkit-scrollbar {
+            width: 5px;
+        }
+        .msg-list::-webkit-scrollbar-track {
+            background: #f0f0f0;
+            border-radius: 4px;
+        }
+        .msg-list::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
 
-<div id="app" class="app">
-    <div class="status-panel">
-        <div class="status-item">
-            <span>服务器状态</span>
-            <span class="status-dot" :class="connectionStatus ? 'online' : 'offline'"></span>
-            <span>{{ connectionStatus ? '已连接' : '未连接' }}</span>
+    <div id="app" class="app">
+        <div class="status-panel">
+            <div class="status-item">
+                <span>服务器状态</span>
+                <span class="status-dot" :class="connectionStatus ? 'online' : 'offline'"></span>
+                <span>{{ connectionStatus ? '已连接' : '未连接' }}</span>
+            </div>
+            <div class="status-item">
+                <span>信息活动</span>
+                <span class="status-dot" :class="isActive ? 'active' : 'inactive'"></span>
+                <span>{{ isActive ? '有信息' : '无信息' }}</span>
+            </div>
+            <div class="status-item">
+                <span>接收消息数</span>
+                <span class="info-badge">{{ messages.length }}</span>
+            </div>
         </div>
-        <div class="status-item">
-            <span>信息活动</span>
-            <span class="status-dot" :class="isActive ? 'active' : 'inactive'"></span>
-            <span>{{ isActive ? '有信息' : '无信息' }}</span>
-        </div>
-        <div class="status-item">
-            <span>接收消息数</span>
-            <span class="info-badge">{{ messages.length }}</span>
-        </div>
-    </div>
 
-    <div class="main-content">
-        <!-- 面板1：final = true -->
-        <div class="panel">
-            <div class="msg-list" ref="finalListRef">
-                <div v-if="finalTrueMessages.length === 0" class="empty-hint">暂无最终字幕</div>
-                <div v-for="item in finalTrueMessages" :key="item.id" class="msg-item">
-                    <div class="meta">
-                        <span>#{{ item.id }}</span>
-                        <span class="final-tag">final</span>
-                        <span style="margin-left:10px;">{{ item.start }}ms</span>
+        <div class="main-content">
+            <!-- 面板1：final = true -->
+            <div class="panel">
+                <div class="msg-list" ref="finalListRef" @scroll="onFinalScroll">
+                    <div v-if="finalTrueMessages.length === 0" class="empty-hint">暂无最终字幕</div>
+                    <div v-for="item in finalTrueMessages" :key="item.id" class="msg-item">
+                        <div class="meta">
+                            <span>#{{ item.id }}</span>
+                            <span class="final-tag">final</span>
+                            <span style="margin-left:10px;">{{ item.start }}ms</span>
+                        </div>
+                        <div class="original">{{ item.original }}</div>
+                        <div class="translation" :class="{ empty: !item.translation }">
+                            {{ item.translation || '（无译文）' }}
+                        </div>
                     </div>
-                    <div class="original">{{ item.original }}</div>
-                    <div class="translation" :class="{ empty: !item.translation }">
-                        {{ item.translation || '（无译文）' }}
+                </div>
+            </div>
+
+            <!-- 面板2：final = false 最近3条 -->
+            <div class="panel">
+                <div class="msg-list" ref="interimListRef" @scroll="onInterimScroll">
+                    <div v-if="finalFalseRecent.length === 0" class="empty-hint">暂无临时字幕</div>
+                    <div v-for="item in finalFalseRecent" :key="item.id" class="msg-item">
+                        <div class="meta">
+                            <span>#{{ item.id }}</span>
+                            <span class="interim-tag">临时</span>
+                            <span style="margin-left:10px;">{{ item.start }}ms</span>
+                        </div>
+                        <div class="original">{{ item.original }}</div>
+                        <div class="translation" :class="{ empty: !item.translation }">
+                            {{ item.translation || '（无译文）' }}
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- 面板2：final = false 最近3条 -->
-        <div class="panel">
-            <div class="msg-list">
-                <div v-if="finalFalseRecent.length === 0" class="empty-hint">暂无临时字幕</div>
-                <div v-for="item in finalFalseRecent" :key="item.id" class="msg-item">
-                    <div class="meta">
-                        <span>#{{ item.id }}</span>
-                        <span class="interim-tag">临时</span>
-                        <span style="margin-left:10px;">{{ item.start }}ms</span>
-                    </div>
-                    <div class="original">{{ item.original }}</div>
-                    <div class="translation" :class="{ empty: !item.translation }">
-                        {{ item.translation || '（无译文）' }}
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
-</div>
 
-<!-- Vue & WebSocket -->
-<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-<script type="importmap">
-{
-    "imports": {
-        "@nktkas/rews": "https://esm.sh/@nktkas/rews@4.1.0"
-    }
-}
-</script>
+    <!-- Vue & WebSocket -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js">
+    </script>
+    <script type="importmap">
+        {
+            "imports": {
+                "@nktkas/rews": "https://esm.sh/@nktkas/rews@4.1.0"
+            }
+        }
+    </script>
 
-<script type="module">
-    import { ReconnectingWebSocket } from '@nktkas/rews';
-    const { createApp, ref, computed, onMounted, onBeforeUnmount, watch, nextTick } = Vue;
+    <script type="module">
+        import {
+            ReconnectingWebSocket
+        } from '@nktkas/rews';
+        const {
+            createApp,
+            ref,
+            computed,
+            onMounted,
+            onBeforeUnmount,
+            watch,
+            nextTick
+        } = Vue;
 
-    const app = createApp({
-        setup() {
-            const connectionStatus = ref(false);
-            const lastMsgTime = ref(0);
-            const messages = ref([]);
-            let msgIdCounter = 0;
-            let inactivityTimer = null;
-            const finalListRef = ref(null);
+        const app = createApp({
+            setup() {
+                const connectionStatus = ref(false);
+                const lastMsgTime = ref(0);
+                const messages = ref([]);
+                let msgIdCounter = 0;
+                let inactivityTimer = null;
 
-            const isActive = computed(() => Date.now() - lastMsgTime.value < 2000);
-            const finalTrueMessages = computed(() => messages.value.filter(item => item.final === true));
-            const finalFalseRecent = computed(() => {
-                const filtered = messages.value.filter(item => item.final === false);
-                const sorted = [...filtered].sort((a, b) => b.id - a.id);
-                const recent = sorted.slice(0, 3);
-                return recent.reverse();
-            });
+                // 两个列表的 DOM 引用
+                const finalListRef = ref(null);
+                const interimListRef = ref(null);
 
-            // 智能跟随：只当滚动条在底部附近时才自动滚到底部
-            watch(finalTrueMessages, () => {
-                nextTick(() => {
+                // ★ 关键改进：用独立变量持续追踪用户是否在底部附近
+                // 初始为 true，使首批消息能自动滚动到底部
+                let userAtBottomFinal = true;
+                let userAtBottomInterim = true;
+                const SCROLL_THRESHOLD = 30; // 底部阈值（像素）
+
+                // 滚动事件处理 —— 实时更新"用户在底部"的状态
+                function onFinalScroll() {
                     const el = finalListRef.value;
                     if (!el) return;
-                    const threshold = 30;  // 底部阈值（像素）
-                    const isNearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - threshold;
-                    if (isNearBottom) {
-                        el.scrollTop = el.scrollHeight;
-                    }
+                    userAtBottomFinal =
+                        el.scrollTop + el.clientHeight >= el.scrollHeight - SCROLL_THRESHOLD;
+                }
+
+                function onInterimScroll() {
+                    const el = interimListRef.value;
+                    if (!el) return;
+                    userAtBottomInterim =
+                        el.scrollTop + el.clientHeight >= el.scrollHeight - SCROLL_THRESHOLD;
+                }
+
+                const isActive = computed(() => Date.now() - lastMsgTime.value < 2000);
+                const finalTrueMessages = computed(() =>
+                    messages.value.filter(item => item.final === true)
+                );
+                const finalFalseRecent = computed(() => {
+                    const filtered = messages.value.filter(item => item.final === false);
+                    const sorted = [...filtered].sort((a, b) => b.id - a.id);
+                    const recent = sorted.slice(0, 3);
+                    return recent.reverse();
                 });
-            }, { deep: false, immediate: true });
 
-            // WebSocket
-            let ws = null;
-            function handleMessage(event) {
-                try {
-                    const data = JSON.parse(event.data);
-                    const items = Array.isArray(data) ? data : [data];
-                    lastMsgTime.value = Date.now();
-                    if (inactivityTimer) clearTimeout(inactivityTimer);
-                    inactivityTimer = setTimeout(() => {}, 2000);
-                    items.forEach(item => {
-                        msgIdCounter++;
-                        messages.value.push({ id: msgIdCounter, ...item });
+                // ★ 监听 finalTrueMessages 变化 → 根据 userAtBottomFinal 决定是否滚动
+                watch(
+                    finalTrueMessages,
+                    () => {
+                        // flush: 'post' 确保 DOM 已更新，scrollHeight 等属性是最新的
+                        nextTick(() => {
+                            const el = finalListRef.value;
+                            if (!el) return;
+                            if (userAtBottomFinal) {
+                                el.scrollTop = el.scrollHeight;
+                            }
+                        });
+                    }, { flush: 'post' }
+                );
+
+                // ★ 同样为临时字幕面板添加智能滚动
+                watch(
+                    finalFalseRecent,
+                    () => {
+                        nextTick(() => {
+                            const el = interimListRef.value;
+                            if (!el) return;
+                            if (userAtBottomInterim) {
+                                el.scrollTop = el.scrollHeight;
+                            }
+                        });
+                    }, { flush: 'post' }
+                );
+
+                // WebSocket
+                let ws = null;
+
+                function handleMessage(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        const items = Array.isArray(data) ? data : [data];
+                        lastMsgTime.value = Date.now();
+                        if (inactivityTimer) clearTimeout(inactivityTimer);
+                        inactivityTimer = setTimeout(() => {}, 2000);
+                        items.forEach(item => {
+                            msgIdCounter++;
+                            messages.value.push({
+                                id: msgIdCounter,
+                                ...item
+                            });
+                        });
+                    } catch (e) {
+                        console.warn('消息解析失败:', e);
+                    }
+                }
+
+                function initWebSocket() {
+                    if (ws) ws.close();
+                    const hostname = window.location.hostname;
+                    const wsUrl = `ws://${hostname}:52218`;
+                    ws = new ReconnectingWebSocket(wsUrl, [], {
+                        retryDelay: 2000
                     });
-                } catch (e) { console.warn('消息解析失败:', e); }
+                    ws.addEventListener('open', () => {
+                        connectionStatus.value = true;
+                    });
+                    ws.addEventListener('message', handleMessage);
+                    ws.addEventListener('close', () => {
+                        connectionStatus.value = false;
+                    });
+                    ws.addEventListener('error', (e) => {
+                        console.error('WebSocket 错误:', e);
+                    });
+                }
+
+                onMounted(() => {
+                    initWebSocket();
+                });
+
+                onBeforeUnmount(() => {
+                    if (ws) ws.close();
+                    if (inactivityTimer) clearTimeout(inactivityTimer);
+                });
+
+                return {
+                    connectionStatus,
+                    isActive,
+                    messages,
+                    finalTrueMessages,
+                    finalFalseRecent,
+                    finalListRef,
+                    interimListRef,
+                    onFinalScroll,
+                    onInterimScroll,
+                };
             }
-            function initWebSocket() {
-                if (ws) ws.close();
-                const hostname = window.location.hostname;
-                const wsUrl = `ws://${hostname}:52218`;
-                ws = new ReconnectingWebSocket(wsUrl, [], { retryDelay: 2000 });
-                ws.addEventListener('open', () => { connectionStatus.value = true; });
-                ws.addEventListener('message', handleMessage);
-                ws.addEventListener('close', () => { connectionStatus.value = false; });
-                ws.addEventListener('error', (e) => { console.error('WebSocket 错误:', e); });
-            }
+        });
 
-            onMounted(() => { initWebSocket(); });
-            onBeforeUnmount(() => {
-                if (ws) ws.close();
-                if (inactivityTimer) clearTimeout(inactivityTimer);
-            });
-
-            return {
-                connectionStatus,
-                isActive,
-                messages,
-                finalTrueMessages,
-                finalFalseRecent,
-                finalListRef,
-            };
-        }
-    });
-
-    app.mount('#app');
-</script>
+        app.mount('#app');
+    </script>
 </body>
 </html>
