@@ -83,9 +83,11 @@ class WebBroadcast:
         # if not isinstance(results, list):
         #     results = [results]  # 兼容传入单个对象
 
+        data_dict = asdict(copy.deepcopy(result))
+
         # 将对象异步放入队列（线程安全）
         asyncio.run_coroutine_threadsafe(
-            self._put_to_queue(copy.deepcopy([result])),
+            self._put_to_queue(copy.deepcopy([data_dict])),
             self.loop
         )
 
@@ -134,14 +136,13 @@ class WebBroadcast:
             try:
                 results = await self.send_queue.get()
                 print(f"results type: {type(results)}")
-                print(f"first item type: {type(results[0]) if results else 'empty'}")
-                print(results[0])
-                print(results[0].original)
+                # print(f"first item type: {type(results[0]) if results else 'empty'}")
+                # print(results[0])
+                # print(results[0].original)
                 # 序列化为 JSON
                 try:
                     # message = json.dumps(asdict(results), ensure_ascii=False)
-                    data = [asdict(item) for item in results]
-                    message = json.dumps(data, ensure_ascii=False)
+                    message = json.dumps(results, ensure_ascii=False)
                 except Exception as e:
                     logger.error(f"序列化失败: {e}")
                     continue
@@ -168,7 +169,7 @@ class WebBroadcast:
         except (websockets.ConnectionClosed, websockets.WebSocketException):
             self.clients.discard(client)
 
-    async def _put_to_queue(self, results: List[TranResult]):
+    async def _put_to_queue(self, results: List[dict]):
         """将结果放入队列（队列满时丢弃）。"""
         try:
             self.send_queue.put_nowait(results)
