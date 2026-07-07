@@ -1,54 +1,361 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>WebSocket 自动重连测试</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>字幕广播接收器</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            padding: 20px;
+        }
+        .app {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        /* 基本信息面板 */
+        .status-panel {
+            background: #fff;
+            border-radius: 8px;
+            padding: 16px 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+        }
+        .status-dot {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+        .status-dot.online {
+            background: #52c41a;
+        }
+        .status-dot.offline {
+            background: #ff4d4f;
+        }
+        .status-dot.active {
+            background: #52c41a;
+            box-shadow: 0 0 8px #52c41a;
+        }
+        .status-dot.inactive {
+            background: #d9d9d9;
+        }
+        .info-badge {
+            background: #e6f7ff;
+            border: 1px solid #91d5ff;
+            color: #1890ff;
+            padding: 2px 12px;
+            border-radius: 12px;
+            font-size: 14px;
+        }
+        /* 主内容：两列 */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        .panel {
+            background: #fff;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .panel h2 {
+            font-size: 18px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid #e8e8e8;
+            padding-bottom: 8px;
+        }
+        .panel h2 .badge {
+            font-size: 14px;
+            font-weight: normal;
+            color: #888;
+            margin-left: 10px;
+        }
+        .msg-list {
+            max-height: 500px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        .msg-item {
+            padding: 10px 12px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .msg-item:last-child {
+            border-bottom: none;
+        }
+        .msg-item .original {
+            font-weight: 500;
+            color: #333;
+        }
+        .msg-item .translation {
+            color: #1890ff;
+            margin-top: 2px;
+        }
+        .msg-item .translation.empty {
+            color: #bbb;
+            font-style: italic;
+        }
+        .msg-item .meta {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 4px;
+        }
+        .msg-item .meta .final-tag {
+            display: inline-block;
+            background: #52c41a;
+            color: #fff;
+            padding: 0 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            margin-left: 6px;
+        }
+        .msg-item .meta .interim-tag {
+            display: inline-block;
+            background: #faad14;
+            color: #fff;
+            padding: 0 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            margin-left: 6px;
+        }
+        .empty-hint {
+            color: #bbb;
+            text-align: center;
+            padding: 30px 0;
+            font-size: 14px;
+        }
+        .recent-label {
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 8px;
+        }
+    </style>
 </head>
 <body>
-    <h1>WebSocket 自动重连测试</h1>
-    <p>打开控制台 (F12) 查看日志</p>
 
-    <script type="module">
-        // 通过 esm.sh CDN 导入 ReconnectingWebSocket
-        import { ReconnectingWebSocket } from 'https://esm.sh/@nktkas/rews';
+<div id="app" class="app">
+    <!-- 基本信息面板 -->
+    <div class="status-panel">
+        <div class="status-item">
+            <span>服务器状态</span>
+            <span class="status-dot" :class="connectionStatus ? 'online' : 'offline'"></span>
+            <span>{{ connectionStatus ? '已连接' : '未连接' }}</span>
+        </div>
+        <div class="status-item">
+            <span>信息活动</span>
+            <span class="status-dot" :class="isActive ? 'active' : 'inactive'"></span>
+            <span>{{ isActive ? '有信息' : '无信息' }}</span>
+        </div>
+        <div class="status-item">
+            <span>接收消息数</span>
+            <span class="info-badge">{{ messages.length }}</span>
+        </div>
+    </div>
 
-        const hostname = window.location.hostname;
-        const WS_URL = `ws://${hostname}:52218`;
+    <!-- 主内容 -->
+    <div class="main-content">
+        <!-- 面板1：final = true 的消息（旧→新） -->
+        <div class="panel">
+            <h2>最终字幕 <span class="badge">(final = true)</span></h2>
+            <div class="msg-list">
+                <div v-if="finalTrueMessages.length === 0" class="empty-hint">暂无最终字幕</div>
+                <div v-for="item in finalTrueMessages" :key="item.id" class="msg-item">
+                    <div class="meta">
+                        <span>#{{ item.id }}</span>
+                        <span class="final-tag">final</span>
+                        <span style="margin-left:10px;">{{ item.start }}ms</span>
+                    </div>
+                    <div class="original">{{ item.original }}</div>
+                    <div class="translation" :class="{ empty: !item.translation }">
+                        {{ item.translation || '（无译文）' }}
+                    </div>
+                </div>
+            </div>
+        </div>
 
-        const ws = new ReconnectingWebSocket(WS_URL, [], {
-            retryDelay: 2000,   // 重连间隔 2 秒（固定间隔）
-            // maxRetries: 10,   // 最大重试次数（可选）
-        });
+        <!-- 面板2：final = false 最近3条 -->
+        <div class="panel">
+            <h2>临时字幕 <span class="badge">(final = false, 最近3条)</span></h2>
+            <div class="msg-list">
+                <div v-if="finalFalseRecent.length === 0" class="empty-hint">暂无临时字幕</div>
+                <div v-for="item in finalFalseRecent" :key="item.id" class="msg-item">
+                    <div class="meta">
+                        <span>#{{ item.id }}</span>
+                        <span class="interim-tag">临时</span>
+                        <span style="margin-left:10px;">{{ item.start }}ms</span>
+                    </div>
+                    <div class="original">{{ item.original }}</div>
+                    <div class="translation" :class="{ empty: !item.translation }">
+                        {{ item.translation || '（无译文）' }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-        ws.addEventListener('open', () => {
-            console.log('✅ 已连接到广播服务');
-        });
+<!-- 引入 Vue 3 -->
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<!-- 引入 reconnecting-websocket -->
+<script type="importmap">
+{
+    "imports": {
+        "@nktkas/rews": "https://esm.sh/@nktkas/rews@4.1.0"
+    }
+}
+</script>
 
-        ws.addEventListener('message', (event) => {
-            console.log('📨 收到广播:', event.data);
-            try {
-                const parsed = JSON.parse(event.data);
-                console.log('  解析后:', parsed);
-            } catch (e) {
-                // 不是 JSON 则忽略
+<script type="module">
+    import { ReconnectingWebSocket } from '@nktkas/rews';
+
+    const { createApp, ref, computed, onMounted, onBeforeUnmount, watch } = Vue;
+
+    const app = createApp({
+        setup() {
+            // --- 响应式状态 ---
+            const connectionStatus = ref(false);          // WebSocket 连接状态
+            const lastMsgTime = ref(0);                   // 最后一次收到消息的时间戳
+            const messages = ref([]);                     // 所有收到的消息（tranResult对象 + 自增id）
+            let msgIdCounter = 0;                         // 消息自增ID
+            let inactivityTimer = null;                   // 定时器句柄
+
+            // 是否处于活动状态（2秒内有消息）
+            const isActive = computed(() => {
+                return Date.now() - lastMsgTime.value < 2000;
+            });
+
+            // 过滤 final = true 的消息（按时间顺序，旧→新）
+            const finalTrueMessages = computed(() => {
+                return messages.value.filter(item => item.final === true);
+            });
+
+            // 过滤 final = false 的消息，取最近3条（新→旧排序后取前3，再反转成旧→新显示）
+            const finalFalseRecent = computed(() => {
+                const filtered = messages.value.filter(item => item.final === false);
+                // 按id降序（最新在前），取前3，再反转使其显示为旧→新
+                const sorted = [...filtered].sort((a, b) => b.id - a.id);
+                const recent = sorted.slice(0, 3);
+                return recent.reverse(); // 旧→新
+            });
+
+            // --- WebSocket 实例 ---
+            let ws = null;
+
+            // --- 处理消息 ---
+            function handleMessage(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    // 保证 data 是数组
+                    const items = Array.isArray(data) ? data : [data];
+                    // 更新最后消息时间
+                    lastMsgTime.value = Date.now();
+                    // 重置2秒变灰计时器
+                    if (inactivityTimer) {
+                        clearTimeout(inactivityTimer);
+                        inactivityTimer = null;
+                    }
+                    // 设置2秒后变灰
+                    inactivityTimer = setTimeout(() => {
+                        // 注意：这里不需要额外操作，因为 computed 会自动根据 lastMsgTime 变化
+                        // 但为了强制更新，可以触发一个无关属性，其实不需要，因为 computed 依赖 lastMsgTime
+                        // 保持空函数即可，因为 lastMsgTime 已经是过去的，isActive 变为 false
+                    }, 2000);
+
+                    // 遍历每个 tranResult 对象
+                    items.forEach(item => {
+                        // 增加自增id，便于唯一标识和排序
+                        msgIdCounter++;
+                        messages.value.push({
+                            id: msgIdCounter,
+                            ...item
+                        });
+                    });
+                } catch (e) {
+                    console.warn('消息解析失败:', e);
+                }
             }
-        });
 
-        ws.addEventListener('close', (event) => {
-            console.warn(`⚠️ 连接已关闭 (代码: ${event.code}, 原因: ${event.reason})`);
-            // 注意：ReconnectingWebSocket 会自动重连，不需要手动处理
-        });
+            // --- 初始化 WebSocket ---
+            function initWebSocket() {
+                if (ws) {
+                    ws.close();
+                }
+                const hostname = window.location.hostname;
+                const wsUrl = `ws://${hostname}:52218`;
+                ws = new ReconnectingWebSocket(wsUrl, [], {
+                    retryDelay: 2000,
+                });
 
-        ws.addEventListener('error', (error) => {
-            console.error('❌ 连接错误:', error);
-        });
+                ws.addEventListener('open', () => {
+                    connectionStatus.value = true;
+                    console.log('✅ WebSocket 已连接');
+                });
 
-        // 页面关闭时主动关闭连接
-        window.addEventListener('beforeunload', () => {
-            if (ws.readyState === WebSocket.OPEN) {
-                ws.close();
+                ws.addEventListener('message', handleMessage);
+
+                ws.addEventListener('close', (event) => {
+                    connectionStatus.value = false;
+                    console.warn(`⚠️ WebSocket 连接关闭: ${event.code}`);
+                });
+
+                ws.addEventListener('error', (error) => {
+                    console.error('❌ WebSocket 错误:', error);
+                });
             }
-        });
-    </script>
+
+            // --- 生命周期 ---
+            onMounted(() => {
+                initWebSocket();
+            });
+
+            onBeforeUnmount(() => {
+                if (ws) {
+                    ws.close();
+                }
+                if (inactivityTimer) {
+                    clearTimeout(inactivityTimer);
+                }
+            });
+
+            // 暴露给模板的数据
+            return {
+                connectionStatus,
+                isActive,
+                messages,
+                finalTrueMessages,
+                finalFalseRecent,
+            };
+        }
+    });
+
+    app.mount('#app');
+</script>
+
 </body>
 </html>

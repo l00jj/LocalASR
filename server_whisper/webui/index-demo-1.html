@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>WebSocket 自动重连测试</title>
+</head>
+<body>
+    <h1>WebSocket 自动重连测试</h1>
+    <p>打开控制台 (F12) 查看日志</p>
+
+    <script type="module">
+        // 通过 esm.sh CDN 导入 ReconnectingWebSocket
+        import { ReconnectingWebSocket } from 'https://esm.sh/@nktkas/rews';
+
+        const hostname = window.location.hostname;
+        const WS_URL = `ws://${hostname}:52218`;
+
+        const ws = new ReconnectingWebSocket(WS_URL, [], {
+            retryDelay: 2000,   // 重连间隔 2 秒（固定间隔）
+            // maxRetries: 10,   // 最大重试次数（可选）
+        });
+
+        ws.addEventListener('open', () => {
+            console.log('✅ 已连接到广播服务');
+        });
+
+        ws.addEventListener('message', (event) => {
+            console.log('📨 收到广播:', event.data);
+            try {
+                const parsed = JSON.parse(event.data);
+                console.log('  解析后:', parsed);
+            } catch (e) {
+                // 不是 JSON 则忽略
+            }
+        });
+
+        ws.addEventListener('close', (event) => {
+            console.warn(`⚠️ 连接已关闭 (代码: ${event.code}, 原因: ${event.reason})`);
+            // 注意：ReconnectingWebSocket 会自动重连，不需要手动处理
+        });
+
+        ws.addEventListener('error', (error) => {
+            console.error('❌ 连接错误:', error);
+        });
+    </script>
+</body>
+</html>
