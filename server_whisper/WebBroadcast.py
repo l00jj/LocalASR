@@ -81,7 +81,7 @@ class WebBroadcast:
         if not self._running:
             raise RuntimeError("广播服务尚未启动，请先调用 start()")
         if not isinstance(results, list):
-            results = list(results)  # 兼容传入单个对象
+            results = [results]  # 兼容传入单个对象
 
         # 将对象异步放入队列（线程安全）
         asyncio.run_coroutine_threadsafe(
