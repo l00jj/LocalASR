@@ -4,18 +4,7 @@ import threading
 import logging
 from typing import List, Set, Optional
 import copy
-# from dataclasses import dataclass, asdict
 import websockets
-
-
-# # 你的数据类（可替换）
-# @dataclass
-# class TranResult:
-#     start: int
-#     duration: float
-#     original: str
-#     translation: str
-#     final: bool
 
 
 logger = logging.getLogger(__name__)
@@ -30,7 +19,7 @@ class WebBroadcast:
     :param max_clients: 允许的最大客户端连接数，超出时新连接将被拒绝
     """
 
-    def __init__(self, port: int = 8765, max_queue_size: int = 20, max_clients: int = 10):
+    def __init__(self, port: int = 52218, max_queue_size: int = 20, max_clients: int = 10):
         self.port = port
         self.max_queue_size = max_queue_size
         self.max_clients = max_clients

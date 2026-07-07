@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>WebSocket 广播客户端</title>
+</head>
+<body>
+    <h1>WebSocket 广播测试</h1>
+    <p>打开控制台 (F12) 查看收到的消息</p>
+    <script>
+        // 连接地址（与你的 WebBroadcast 端口一致）
+        const WS_URL = 'ws://192.168.0.118:52218';
+
+        // 创建 WebSocket 连接
+        const ws = new WebSocket(WS_URL);
+
+        // 连接打开时
+        ws.addEventListener('open', () => {
+            console.log('✅ 已连接到广播服务');
+        });
+
+        // 接收到消息时
+        ws.addEventListener('message', (event) => {
+            console.log('📨 收到广播:', event.data);
+            // 如果数据是 JSON，可以进一步解析
+            try {
+                const parsed = JSON.parse(event.data);
+                console.log('  解析后:', parsed);
+            } catch (e) {
+                // 不是 JSON 则忽略
+            }
+        });
+
+        // 连接关闭时
+        ws.addEventListener('close', (event) => {
+            console.warn(`⚠️ 连接已关闭 (代码: ${event.code}, 原因: ${event.reason})`);
+        });
+
+        // 连接错误时
+        ws.addEventListener('error', (error) => {
+            console.error('❌ 连接错误:', error);
+        });
+
+        // 可选：页面关闭时主动关闭连接
+        window.addEventListener('beforeunload', () => {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.close();
+            }
+        });
+    </script>
+</body>
+</html>
