@@ -54,34 +54,29 @@ class WebHtmlServer:
                 super().__init__(*args, directory=web_dir, **kwargs)
 
             def translate_path(self, path):
-                """安全检查，防止路径遍历"""
                 path = urllib.parse.urlparse(path).path
                 if path.startswith('/'):
                     path = path[1:]
                 full_path = os.path.join(self.directory, path)
                 full_path = os.path.realpath(full_path)
-                if not full_path.startswith(os.path.realpath(self.directory) + os.sep):
+                real_dir = os.path.realpath(self.directory)
+                # 允许路径等于根目录，或以根目录+斜杠开头
+                if not (full_path == real_dir or full_path.startswith(real_dir + os.sep)):
+                    # 越界访问，返回不存在的路径
                     return os.path.join(self.directory, 'FORBIDDEN')
                 return full_path
 
             def send_head(self):
-                """
-                重写 send_head，对目录优先返回 index.html，否则 404
-                """
                 path = self.translate_path(self.path)
                 if os.path.isdir(path):
-                    # 检查是否存在 index.html
                     index_path = os.path.join(path, 'index.html')
                     if os.path.exists(index_path):
-                        # 将请求路径改为 /index.html，复用父类逻辑
                         self.path = self.path.rstrip('/') + '/index.html'
                         return super().send_head()
                     else:
-                        # 没有 index.html，返回 404
                         self.send_error(404, "Not Found")
                         return None
                 else:
-                    # 文件或不存在，调用父类
                     return super().send_head()
 
         # 创建服务器
