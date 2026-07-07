@@ -72,20 +72,20 @@ class WebBroadcast:
         logger.info("广播服务已停止")
 
     # 整合列表功能未完善
-    def send(self, results: List[TranResult]) -> None:
+    def send(self, result: TranResult) -> None:
         """
         发送一条或多条字幕消息（批量推送）。
 
-        :param results: TranResult 对象的列表（至少一个元素）
+        :param result: TranResult 对象
         """
         if not self._running:
             raise RuntimeError("广播服务尚未启动，请先调用 start()")
-        if not isinstance(results, list):
-            results = [results]  # 兼容传入单个对象
+        # if not isinstance(results, list):
+        #     results = [results]  # 兼容传入单个对象
 
         # 将对象异步放入队列（线程安全）
         asyncio.run_coroutine_threadsafe(
-            self._put_to_queue(copy.deepcopy(results)),
+            self._put_to_queue(copy.deepcopy([result])),
             self.loop
         )
 
