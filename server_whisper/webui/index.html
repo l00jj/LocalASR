@@ -13,7 +13,7 @@
         import { ReconnectingWebSocket } from 'https://esm.sh/@nktkas/rews';
 
         const hostname = window.location.hostname;
-        const WS_URL = `ws://{hostname}:52218`;
+        const WS_URL = `ws://${hostname}:52218`;
 
         const ws = new ReconnectingWebSocket(WS_URL, [], {
             retryDelay: 2000,   // 重连间隔 2 秒（固定间隔）
