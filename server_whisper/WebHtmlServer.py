@@ -51,31 +51,38 @@ class WebHtmlServer:
         # 自定义请求处理器
         class SecureHandler(http.server.SimpleHTTPRequestHandler):
             def __init__(self, *args, **kwargs):
-                # Python 3.7+ 支持 directory 参数，强制指定根目录
                 super().__init__(*args, directory=web_dir, **kwargs)
 
-            def list_directory(self, path):
-                """禁用目录列表，直接返回 404"""
-                self.send_error(404, "Not Found")
-                return None
-
             def translate_path(self, path):
-                """
-                重写路径转换，增加安全检查，防止目录遍历攻击（如 /../etc/passwd）
-                """
-                # 去除查询字符串
+                """安全检查，防止路径遍历"""
                 path = urllib.parse.urlparse(path).path
-                # 去除前导斜杠，并拼接根目录
                 if path.startswith('/'):
                     path = path[1:]
                 full_path = os.path.join(self.directory, path)
-                # 规范化路径（解析 .. 和符号链接）
                 full_path = os.path.realpath(full_path)
-                # 检查路径是否仍在根目录内
                 if not full_path.startswith(os.path.realpath(self.directory) + os.sep):
-                    # 越界访问，返回一个不存在的文件路径，导致 404
                     return os.path.join(self.directory, 'FORBIDDEN')
                 return full_path
+
+            def send_head(self):
+                """
+                重写 send_head，对目录优先返回 index.html，否则 404
+                """
+                path = self.translate_path(self.path)
+                if os.path.isdir(path):
+                    # 检查是否存在 index.html
+                    index_path = os.path.join(path, 'index.html')
+                    if os.path.exists(index_path):
+                        # 将请求路径改为 /index.html，复用父类逻辑
+                        self.path = self.path.rstrip('/') + '/index.html'
+                        return super().send_head()
+                    else:
+                        # 没有 index.html，返回 404
+                        self.send_error(404, "Not Found")
+                        return None
+                else:
+                    # 文件或不存在，调用父类
+                    return super().send_head()
 
         # 创建服务器
         self._server = http.server.HTTPServer(
