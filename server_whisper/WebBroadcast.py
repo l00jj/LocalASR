@@ -5,10 +5,10 @@ import logging
 from typing import List, Set, Optional
 import copy
 from dataclasses import dataclass, asdict
+import websockets
+
 
 # 你的数据类（可替换）
-
-
 @dataclass
 class TranResult:
     start: int
