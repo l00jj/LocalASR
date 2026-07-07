@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>字幕广播接收器 · 带消息更新</title>
+    <title>字幕广播接收器</title>
     <style>
         * {
             box-sizing: border-box;
@@ -228,7 +228,8 @@
     </div>
 
     <!-- Vue & WebSocket -->
-    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js">
+    </script>
     <script type="importmap">
         {
             "imports": {
@@ -238,15 +239,24 @@
     </script>
 
     <script type="module">
-        import { ReconnectingWebSocket } from '@nktkas/rews';
-        const { createApp, ref, computed, onMounted, onBeforeUnmount, watch, nextTick } = Vue;
+        import {
+            ReconnectingWebSocket
+        } from '@nktkas/rews';
+        const {
+            createApp,
+            ref,
+            computed,
+            onMounted,
+            onBeforeUnmount,
+            watch,
+            nextTick
+        } = Vue;
 
         const app = createApp({
             setup() {
                 const connectionStatus = ref(false);
                 const lastMsgTime = ref(0);
-                const messages = ref([]);           // 所有消息的列表（响应式）
-                const messageMap = new Map();       // start → 消息对象，用于快速更新
+                const messages = ref([]);
                 let msgIdCounter = 0;
                 let inactivityTimer = null;
 
@@ -254,11 +264,13 @@
                 const finalListRef = ref(null);
                 const interimListRef = ref(null);
 
-                // 用户是否在底部附近（控制自动滚动）
+                // ★ 关键改进：用独立变量持续追踪用户是否在底部附近
+                // 初始为 true，使首批消息能自动滚动到底部
                 let userAtBottomFinal = true;
                 let userAtBottomInterim = true;
-                const SCROLL_THRESHOLD = 30;
+                const SCROLL_THRESHOLD = 30; // 底部阈值（像素）
 
+                // 滚动事件处理 —— 实时更新"用户在底部"的状态
                 function onFinalScroll() {
                     const el = finalListRef.value;
                     if (!el) return;
@@ -274,11 +286,9 @@
                 }
 
                 const isActive = computed(() => Date.now() - lastMsgTime.value < 2000);
-
                 const finalTrueMessages = computed(() =>
                     messages.value.filter(item => item.final === true)
                 );
-
                 const finalFalseRecent = computed(() => {
                     const filtered = messages.value.filter(item => item.final === false);
                     const sorted = [...filtered].sort((a, b) => b.id - a.id);
@@ -286,29 +296,38 @@
                     return recent.reverse();
                 });
 
-                // 监听 finalTrueMessages 变化 → 根据 userAtBottomFinal 决定是否滚动
-                watch(finalTrueMessages, () => {
-                    nextTick(() => {
-                        const el = finalListRef.value;
-                        if (!el) return;
-                        if (userAtBottomFinal) {
-                            el.scrollTop = el.scrollHeight;
-                        }
-                    });
-                }, { flush: 'post' });
+                // ★ 监听 finalTrueMessages 变化 → 根据 userAtBottomFinal 决定是否滚动
+                watch(
+                    finalTrueMessages,
+                    () => {
+                        // flush: 'post' 确保 DOM 已更新，scrollHeight 等属性是最新的
+                        nextTick(() => {
+                            const el = finalListRef.value;
+                            if (!el) return;
+                            if (userAtBottomFinal) {
+                                el.scrollTop = el.scrollHeight;
+                            }
+                        });
+                    }, { flush: 'post' }
+                );
 
-                // 临时字幕面板智能滚动
-                watch(finalFalseRecent, () => {
-                    nextTick(() => {
-                        const el = interimListRef.value;
-                        if (!el) return;
-                        if (userAtBottomInterim) {
-                            el.scrollTop = el.scrollHeight;
-                        }
-                    });
-                }, { flush: 'post' });
+                // ★ 同样为临时字幕面板添加智能滚动
+                watch(
+                    finalFalseRecent,
+                    () => {
+                        nextTick(() => {
+                            const el = interimListRef.value;
+                            if (!el) return;
+                            if (userAtBottomInterim) {
+                                el.scrollTop = el.scrollHeight;
+                            }
+                        });
+                    }, { flush: 'post' }
+                );
 
-                // ========== 核心：消息处理（支持同 start 更新） ==========
+                // WebSocket
+                let ws = null;
+
                 function handleMessage(event) {
                     try {
                         const data = JSON.parse(event.data);
@@ -316,33 +335,25 @@
                         lastMsgTime.value = Date.now();
                         if (inactivityTimer) clearTimeout(inactivityTimer);
                         inactivityTimer = setTimeout(() => {}, 2000);
-
                         items.forEach(item => {
-                            const key = item.start;   // 以 start 毫秒时间戳作为唯一标识
-                            if (messageMap.has(key)) {
-                                // 已存在 → 原地更新属性（翻译、final状态等）
-                                const existing = messageMap.get(key);
-                                Object.assign(existing, item, { id: existing.id }); // 保留原 id
-                            } else {
-                                // 新句子 → 创建并加入列表
-                                msgIdCounter++;
-                                const newMsg = { id: msgIdCounter, ...item };
-                                messages.value.push(newMsg);
-                                messageMap.set(key, newMsg);
-                            }
+                            msgIdCounter++;
+                            messages.value.push({
+                                id: msgIdCounter,
+                                ...item
+                            });
                         });
                     } catch (e) {
                         console.warn('消息解析失败:', e);
                     }
                 }
 
-                // WebSocket 连接
-                let ws = null;
                 function initWebSocket() {
                     if (ws) ws.close();
                     const hostname = window.location.hostname;
                     const wsUrl = `ws://${hostname}:52218`;
-                    ws = new ReconnectingWebSocket(wsUrl, [], { retryDelay: 2000 });
+                    ws = new ReconnectingWebSocket(wsUrl, [], {
+                        retryDelay: 2000
+                    });
                     ws.addEventListener('open', () => {
                         connectionStatus.value = true;
                     });

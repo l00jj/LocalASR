@@ -152,7 +152,8 @@ def udp_receiver():
         # 追加至缓冲区
         with buffer_lock:
             duration_ms = int(len(audio_buffer) * 1000 // TARGET_SAMPLE_RATE)
-            audio_timestamp_ms = duration_ms + timestamp_ms
+            print(timestamp_ms, duration_ms)
+            audio_timestamp_ms = timestamp_ms - duration_ms
             audio_buffer = np.concatenate([audio_buffer, target_rate_mono])
             # 检测是否有声音
             if np.max(np.abs(target_rate_mono)) > SILENCE_THRESHOLD:
@@ -288,6 +289,10 @@ def collection_worker():
             tranResult.translation = result
             webBroadcast.send(resultformat(tranResult))
 
+    # 闭包工具
+    def make_callback(tr):
+        return lambda is_ok, result: translationCallback(is_ok, result, tr)
+
     # 循环处理
     while True:
         try:
@@ -305,8 +310,7 @@ def collection_worker():
             translationService.translate(
                 text=tranResult.original,
                 to_lang="中文",
-                callback=lambda is_ok, result: translationCallback(
-                    is_ok, result, tranResult)
+                callback=make_callback(tranResult)
             )
 
 
