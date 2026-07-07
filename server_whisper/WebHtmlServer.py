@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 
 import os
-import socket
 import http.server
 import urllib.parse
 import threading
 import time
+import netifaces
 
 
 def get_all_local_ips():
