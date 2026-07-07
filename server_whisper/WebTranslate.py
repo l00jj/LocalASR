@@ -3,6 +3,10 @@ import requests
 import multiprocessing
 from typing import Optional, Callable, Tuple
 
+def translate_text_test(source_text: str, to_lang: str, server: str) -> str:
+    print("✅",source_text,to_lang)
+    return (False, "123")
+
 # ================== 翻译服务类 ==================
 class TranslationService:
     """
@@ -70,11 +74,17 @@ class TranslationService:
                 callback(is_ok, result)
 
         # 异步提交任务到进程池
+        # self.pool.apply_async(
+        #     self._translate_text,
+        #     args=(text, to_lang, self.server),
+        #     callback=done_callback
+        # )
         self.pool.apply_async(
-            self._translate_text,
+            translate_text_test,
             args=(text, to_lang, self.server),
             callback=done_callback
         )
+        
 
     def close(self) -> None:
         """关闭进程池，等待所有任务完成（优雅退出）。"""
