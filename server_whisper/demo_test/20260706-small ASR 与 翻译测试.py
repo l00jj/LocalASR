@@ -299,7 +299,7 @@ def translation_worker():
         # [计时器] 结束计时
         timer_end_time = time.perf_counter()
         timer_process_time = timer_end_time - timer_start_time
-        print(f"翻译耗时: {timer_process_time:.3f}s | {'✅ 实时' if timer_process_time < TIME_INFERENCE_INTERVAL else '❌ 超时'}")
+        print(f"[性能] 翻译耗时: {timer_process_time:.3f}s | {'✅ 实时' if timer_process_time < TIME_INFERENCE_INTERVAL else '❌ 超时'}")
 
 
 
