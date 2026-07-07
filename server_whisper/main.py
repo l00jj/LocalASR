@@ -315,6 +315,8 @@ def collection_worker():
         except queue.Empty:
             continue
         
+        print("collection_worker_queue_itme",tranResult)
+        
         # 广播环节
         
         
