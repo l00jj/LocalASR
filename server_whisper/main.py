@@ -1,3 +1,5 @@
+from WebBroadcast import WebBroadcast
+from WebTranslate import TranslationService
 import os
 import numpy as np
 import librosa
@@ -7,7 +9,6 @@ import time
 import socket
 import queue
 from collections import deque
-from dataclasses import dataclass, asdict
 from faster_whisper import WhisperModel
 import soundfile as sf
 
@@ -26,7 +27,8 @@ READABLE_BUFFER_SIZE = 1024 * 1024 * 7  # 7M 缓存
 
 # ================== 识别模型配置 ==================
 # 模型实际路径
-MODEL_PATH = os.path.expanduser("~/LocalASR/server_whisper/models/faster-whisper-small")
+MODEL_PATH = os.path.expanduser(
+    "~/LocalASR/server_whisper/models/faster-whisper-small")
 LANG = "en"          # 不指定 None，
 
 # ================== 推理参数 ==================
@@ -85,7 +87,6 @@ result_queue = queue.Queue(maxsize=50)
 
 
 # ================== 结果 Class ==================
-@dataclass
 class TranResult:
     """
     存储单段语音识别结果，包含时间信息、原文及译文。
@@ -99,13 +100,13 @@ class TranResult:
         translation: 对应的中文翻译文本
         final:       该结果是否为最终信息
     """
+
     def __init__(self, start=0, duration="", original="", translation="", final=False):
         self.start = start
         self.duration = duration
         self.original = original
         self.translation = translation
         self.final = final
-
 
 
 # ================== UDP 接收线程 ==================
@@ -127,7 +128,7 @@ def udp_receiver():
         except Exception as e:
             print(f"UDP 接收错误: {e}", file=sys.stderr)
             continue
-        
+
         # 时间戳数据
         time_data = data[:8]
         timestamp_ms = int.from_bytes(time_data, 'big')
@@ -144,7 +145,8 @@ def udp_receiver():
         mono = np.mean(audio_float32, axis=1)
 
         # 重采样到目标码率
-        target_rate_mono = librosa.resample(mono, orig_sr=SOURCE_SAMPLE_RATE, target_sr=TARGET_SAMPLE_RATE) if SOURCE_SAMPLE_RATE != TARGET_SAMPLE_RATE else mono
+        target_rate_mono = librosa.resample(
+            mono, orig_sr=SOURCE_SAMPLE_RATE, target_sr=TARGET_SAMPLE_RATE) if SOURCE_SAMPLE_RATE != TARGET_SAMPLE_RATE else mono
 
         # 追加至缓冲区
         with buffer_lock:
@@ -154,8 +156,6 @@ def udp_receiver():
             # 检测是否有声音
             if np.max(np.abs(target_rate_mono)) > SILENCE_THRESHOLD:
                 volume_detected = True
-
-
 
 
 # ================== 识别工作线程 ==================
@@ -186,7 +186,7 @@ def recognition_worker():
 
         # 记录音频实际时长（秒）
         timer_audio_duration = len(current_audio_buffer) / TARGET_SAMPLE_RATE
-        
+
         # [计时器] 开始计时
         timer_start_time = time.perf_counter()
 
@@ -207,26 +207,28 @@ def recognition_worker():
             )
         except Exception as e:
             print(f"[识别错误] {e}", file=sys.stderr)
-        
+
         # 整理推理结果
         segments_list = list(segments)
         segments_endi = len(segments_list) - 1
         split_time = -1
         for i, seg in enumerate(segments_list):
             text = seg.text.strip()
-            
+
             if not text:
                 continue
 
             # 如果句子结束离音频结束大于指定秒数才算正式句子 （small 约为 2，模型自身判断越准确可以越小）
             tranResult = TranResult(
-                start=current_audio_buffer_timestamp_ms + int(seg.start * 1000),
-                duration = seg.end - seg.start,
-                original = text,
-                final = timer_audio_duration - seg.end > 2
+                start=current_audio_buffer_timestamp_ms +
+                int(seg.start * 1000),
+                duration=seg.end - seg.start,
+                original=text,
+                final=timer_audio_duration - seg.end > 2
             )
 
-            print(f"{"●" if tranResult.final else "○"} No.{str(i+1)} | {seg.start:.2f}s -> {seg.end:.2f}s")
+            print(
+                f"{"●" if tranResult.final else "○"} No.{str(i+1)} | {seg.start:.2f}s -> {seg.end:.2f}s")
             print(f"[en] {tranResult.original}")
 
             if not tranResult.final and split_time == -1:
@@ -235,40 +237,38 @@ def recognition_worker():
             # 提交到最终处理队列
             result_queue.put_nowait(tranResult)
 
-        ################ 如果最后一段是超长句则执行强制截断（直接结束抛弃缓存）
+        # 如果最后一段是超长句则执行强制截断（直接结束抛弃缓存）
         # if tranResult.duration < MAX_SEGMENT_DURATION:
-        if split_time != -1:    
-            # 如果非正式段存在前置无效音（前面有至少 1 秒），则进行剪裁  
+        if split_time != -1:
+            # 如果非正式段存在前置无效音（前面有至少 1 秒），则进行剪裁
             if split_time > 1:
                 start_index = int(split_time * TARGET_SAMPLE_RATE)
                 current_audio_buffer = current_audio_buffer[start_index:]
             with buffer_lock:
-                audio_buffer = np.concatenate([current_audio_buffer, audio_buffer])
-            
+                audio_buffer = np.concatenate(
+                    [current_audio_buffer, audio_buffer])
+
         # [计时器] 结束计时
         timer_end_time = time.perf_counter()
         timer_process_time = timer_end_time - timer_start_time
         rtf = timer_process_time / timer_audio_duration
         print(f"[性能] 音频长度: {timer_audio_duration:.2f}s | "
-                f"推理耗时: {timer_process_time:.3f}s | RTF: {rtf:.2f} | "
-                f"{'✅ 实时' if timer_process_time < TIME_INFERENCE_INTERVAL else '❌ 超时'}")
-
-
+              f"推理耗时: {timer_process_time:.3f}s | RTF: {rtf:.2f} | "
+              f"{'✅ 实时' if timer_process_time < TIME_INFERENCE_INTERVAL else '❌ 超时'}")
 
 
 # ================== 结果汇总处理工作线程 ==================
-from WebTranslate import TranslationService
-from WebBroadcast import WebBroadcast
 
 
-############## 整合列表后发送功能未完善，目前都是单条数列发送
+# 整合列表后发送功能未完善，目前都是单条数列发送
 def resultformat(tranResult: TranResult):
-    print("----------resultformat----------")
-    print(tranResult)
-    print(tranResult.original)
-    data_dict = asdict(tranResult)
-    print(data_dict)
-    print(data_dict["original"])
+    data_dict = {
+        "start": tranResult.start,
+        "duration": tranResult.duration,
+        "original": tranResult.original,
+        "translation": tranResult.translation,
+        "final": tranResult.final
+    }
     return [data_dict]
 
 
@@ -281,6 +281,7 @@ def collection_worker():
 
     # 翻译服务
     translationService = TranslationService(server="127.0.0.1:52208")
+
     def translationCallback(is_ok: bool, result: str, tranResult: TranResult):
         if is_ok:
             tranResult.translation = result
@@ -292,22 +293,20 @@ def collection_worker():
             tranResult: TranResult = result_queue.get(timeout=5.0)
         except queue.Empty:
             continue
-        
-        print("collection_worker_queue_itme",tranResult)
-        
+
+        print("collection_worker_queue_itme", tranResult)
+
         # 广播环节
         webBroadcast.send(resultformat(tranResult))
-        
+
         # 翻译环节
-        if tranResult.final: # 能效不高时只对完整句子进行翻译
+        if tranResult.final:  # 能效不高时只对完整句子进行翻译
             translationService.translate(
                 text=tranResult.original,
                 to_lang="中文",
-                callback=lambda is_ok, result: translationCallback(is_ok, result, tranResult)
+                callback=lambda is_ok, result: translationCallback(
+                    is_ok, result, tranResult)
             )
-
-        
-
 
 
 # ================== 启动线程 ==================
