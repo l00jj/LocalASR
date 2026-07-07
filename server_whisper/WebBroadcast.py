@@ -133,6 +133,7 @@ class WebBroadcast:
         while self._running:
             try:
                 results = await self.send_queue.get()
+                print(results)
                 # 序列化为 JSON
                 try:
                     # message = json.dumps(asdict(results), ensure_ascii=False)
@@ -164,7 +165,7 @@ class WebBroadcast:
         except (websockets.ConnectionClosed, websockets.WebSocketException):
             self.clients.discard(client)
 
-    async def _put_to_queue(self, results):
+    async def _put_to_queue(self, results: List[TranResult]):
         """将结果放入队列（队列满时丢弃）。"""
         try:
             self.send_queue.put_nowait(results)
